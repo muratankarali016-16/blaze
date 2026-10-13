@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import requests
 from io import BytesIO
+from PIL import Image
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="BlazeGPT", page_icon="🔥", layout="centered")
@@ -29,7 +30,14 @@ CEVIRI = {
             "Komedyen": "Sen esprili bir komedyensin. Mizah katarsın. Türkçe cevap ver."
         },
         "kisilik_isimleri": ["Normal Asistan", "Öğretmen", "Şair", "Kod Yazıcı", "Komedyen"],
-        "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı."
+        "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
+        "gorsel_ayarlari": "🖼️ Görsel Ayarları",
+        "gorsel_sayisi": "Görsel Sayısı",
+        "gorsel_boyut": "Boyut",
+        "kare": "⬛ Kare (1024x1024)",
+        "yatay": "▬ Yatay (1280x720)",
+        "dikey": "▮ Dikey (720x1280)",
+        "indir": "💾 İndir"
     },
     "en": {
         "dil_adi": "🇬🇧 English", "baslik": "BlazeGPT",
@@ -49,7 +57,14 @@ CEVIRI = {
             "Comedian": "You are a funny comedian. Add humor. Answer in English."
         },
         "kisilik_isimleri": ["Normal Assistant", "Teacher", "Poet", "Coder", "Comedian"],
-        "hata": "⚠️ Error", "gorsel_hata": "Could not generate image."
+        "hata": "⚠️ Error", "gorsel_hata": "Could not generate image.",
+        "gorsel_ayarlari": "🖼️ Image Settings",
+        "gorsel_sayisi": "Number of Images",
+        "gorsel_boyut": "Size",
+        "kare": "⬛ Square (1024x1024)",
+        "yatay": "▬ Landscape (1280x720)",
+        "dikey": "▮ Portrait (720x1280)",
+        "indir": "💾 Download"
     },
     "de": {
         "dil_adi": "🇩🇪 Deutsch", "baslik": "BlazeGPT",
@@ -69,7 +84,14 @@ CEVIRI = {
             "Komiker": "Du bist ein lustiger Komiker. Füge Humor hinzu. Antworte auf Deutsch."
         },
         "kisilik_isimleri": ["Normaler Assistent", "Lehrer", "Dichter", "Programmierer", "Komiker"],
-        "hata": "⚠️ Fehler", "gorsel_hata": "Bild konnte nicht generiert werden."
+        "hata": "⚠️ Fehler", "gorsel_hata": "Bild konnte nicht generiert werden.",
+        "gorsel_ayarlari": "🖼️ Bild-Einstellungen",
+        "gorsel_sayisi": "Anzahl der Bilder",
+        "gorsel_boyut": "Größe",
+        "kare": "⬛ Quadrat (1024x1024)",
+        "yatay": "▬ Querformat (1280x720)",
+        "dikey": "▮ Hochformat (720x1280)",
+        "indir": "💾 Herunterladen"
     },
     "fr": {
         "dil_adi": "🇫🇷 Français", "baslik": "BlazeGPT",
@@ -89,7 +111,14 @@ CEVIRI = {
             "Comédien": "Tu es un comédien drôle. Ajoute de l'humour. Réponds en français."
         },
         "kisilik_isimleri": ["Assistant Normal", "Professeur", "Poète", "Programmeur", "Comédien"],
-        "hata": "⚠️ Erreur", "gorsel_hata": "Impossible de générer l'image."
+        "hata": "⚠️ Erreur", "gorsel_hata": "Impossible de générer l'image.",
+        "gorsel_ayarlari": "🖼️ Paramètres d'image",
+        "gorsel_sayisi": "Nombre d'images",
+        "gorsel_boyut": "Taille",
+        "kare": "⬛ Carré (1024x1024)",
+        "yatay": "▬ Paysage (1280x720)",
+        "dikey": "▮ Portrait (720x1280)",
+        "indir": "💾 Télécharger"
     },
     "es": {
         "dil_adi": "🇪🇸 Español", "baslik": "BlazeGPT",
@@ -109,7 +138,14 @@ CEVIRI = {
             "Comediante": "Eres un comediante divertido. Añade humor. Responde en español."
         },
         "kisilik_isimleri": ["Asistente Normal", "Profesor", "Poeta", "Programador", "Comediante"],
-        "hata": "⚠️ Error", "gorsel_hata": "No se pudo generar la imagen."
+        "hata": "⚠️ Error", "gorsel_hata": "No se pudo generar la imagen.",
+        "gorsel_ayarlari": "🖼️ Ajustes de imagen",
+        "gorsel_sayisi": "Número de imágenes",
+        "gorsel_boyut": "Tamaño",
+        "kare": "⬛ Cuadrado (1024x1024)",
+        "yatay": "▬ Horizontal (1280x720)",
+        "dikey": "▮ Vertical (720x1280)",
+        "indir": "💾 Descargar"
     }
 }
 
@@ -131,6 +167,11 @@ st.markdown("""
         background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
         color: white; border: none; border-radius: 20px;
         font-weight: bold; width: 100%;
+    }
+    .stDownloadButton button {
+        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
+        color: white; border: none; border-radius: 15px;
+        font-size: 0.85em; padding: 5px 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -212,6 +253,24 @@ def sohbet_sil(sid):
     conn.commit()
     conn.close()
 
+# --- GÖRSEL OLUŞTURMA (ÇOKLU) ---
+def gorsel_olustur(prompt, genislik, yukseklik, seed=0):
+    """Tek bir görsel oluşturur."""
+    try:
+        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}"
+        params = {
+            "width": genislik,
+            "height": yukseklik,
+            "nologo": "true",
+            "seed": seed
+        }
+        r = requests.get(url, params=params, timeout=90)
+        if r.status_code == 200:
+            return r.content
+        return None
+    except Exception:
+        return None
+
 # --- SESSION STATE ---
 if "aktif_sohbet_id" not in st.session_state:
     st.session_state.aktif_sohbet_id = yeni_sohbet()
@@ -276,8 +335,27 @@ with st.sidebar:
     model = st.selectbox(T["model"], ["openai/gpt-oss-20b", "openai/gpt-oss-120b"])
     kisi_secim = st.selectbox(T["kisilik"], T["kisilik_isimleri"])
     kisi = T["kisilikler"][kisi_secim]
+    
     st.markdown("---")
     gorsel_modu = st.toggle(T["gorsel_modu"], value=False)
+    
+    # GÖRSEL AYARLARI (sadece mod açıkken görünür)
+    if gorsel_modu:
+        st.markdown(f"### {T['gorsel_ayarlari']}")
+        
+        gorsel_sayisi = st.slider(T["gorsel_sayisi"], min_value=1, max_value=4, value=4)
+        
+        boyut_secim = st.radio(T["gorsel_boyut"], [
+            T["kare"], T["yatay"], T["dikey"]
+        ])
+        
+        # Boyut değerleri
+        if boyut_secim == T["kare"]:
+            genislik, yukseklik = 1024, 1024
+        elif boyut_secim == T["yatay"]:
+            genislik, yukseklik = 1280, 720
+        else:
+            genislik, yukseklik = 720, 1280
 
 # --- HOŞGELDİN ---
 if not st.session_state.mesajlar:
@@ -299,20 +377,45 @@ if soru := st.chat_input(T["sor"]):
     
     with st.chat_message("assistant", avatar="🔥"):
         if gorsel_modu:
+            # ÇOKLU GÖRSEL OLUŞTURMA
             with st.spinner(T["gorsel_olusturuluyor"]):
-                try:
-                    url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
-                    r = requests.get(url, timeout=60)
-                    if r.status_code == 200:
-                        st.image(BytesIO(r.content), caption=soru, use_container_width=True)
-                        cevap = f"🖼️ {soru}"
+                st.markdown(f"**{soru}**")
+                
+                # Görselleri oluştur
+                gorseller = []
+                for i in range(gorsel_sayisi):
+                    veri = gorsel_olustur(soru, genislik, yukseklik, seed=i*1000)
+                    if veri:
+                        gorseller.append(veri)
+                
+                if gorseller:
+                    # 2x2 grid olarak göster
+                    if len(gorseller) == 1:
+                        st.image(BytesIO(gorseller[0]), use_container_width=True)
                     else:
-                        st.error(T["gorsel_hata"])
-                        cevap = T["gorsel_hata"]
-                except Exception as e:
-                    st.error(f"{T['hata']}: {e}")
+                        # 2 sütunlu grid
+                        for i in range(0, len(gorseller), 2):
+                            cols = st.columns(2)
+                            for j, col in enumerate(cols):
+                                idx = i + j
+                                if idx < len(gorseller):
+                                    with col:
+                                        st.image(BytesIO(gorseller[idx]), use_container_width=True)
+                                        # İndirme butonu
+                                        st.download_button(
+                                            label=T["indir"],
+                                            data=gorseller[idx],
+                                            file_name=f"blazegpt_{idx+1}.png",
+                                            mime="image/png",
+                                            key=f"indir_{idx}_{datetime.now().timestamp()}"
+                                        )
+                    
+                    cevap = f"🖼️ {gorsel_sayisi} görsel oluşturuldu: {soru}"
+                else:
+                    st.error(T["gorsel_hata"])
                     cevap = T["gorsel_hata"]
         else:
+            # NORMAL SOHBET
             yer = st.empty()
             tam = ""
             try:
@@ -333,4 +436,4 @@ if soru := st.chat_input(T["sor"]):
                 cevap = "Hata"
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)0
