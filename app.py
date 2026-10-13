@@ -149,18 +149,15 @@ CEVIRI = {
     }
 }
 
-# --- ÖZEL CSS (DEEPSEEK TEMASI) ---
+# --- ÖZEL CSS (WHATSAPP + DEEPSEEK TEMASI) ---
 st.markdown("""
 <style>
-    .stApp {
-        background: #1e1e2e;
-    }
+    .stApp { background: #1e1e2e; }
     .ana-baslik {
         text-align: center;
         color: #4d6bfe;
         font-size: 2.8em;
         font-weight: 700;
-        letter-spacing: -0.5px;
         margin-bottom: 0;
     }
     .alt-baslik {
@@ -170,42 +167,69 @@ st.markdown("""
         margin-bottom: 30px;
         font-size: 0.95em;
     }
-    .stChatMessage {
+    
+    /* WhatsApp tarzı sohbet alanı */
+    .whatsapp-container {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 16px 8px;
+        background: #1e1e2e;
+        border-radius: 15px;
+        min-height: 300px;
+    }
+    .mesaj-satir {
+        display: flex;
+        width: 100%;
+        margin-bottom: 4px;
+    }
+    .mesaj-satir.sag { justify-content: flex-end; }
+    .mesaj-satir.sol { justify-content: flex-start; }
+    
+    .balon {
+        max-width: 75%;
+        padding: 10px 14px 6px 14px;
+        border-radius: 18px;
+        font-size: 0.95em;
+        line-height: 1.5;
+        word-wrap: break-word;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    .balon.kullanici {
+        background: #005c4b;
+        color: #e9edef;
+        border-bottom-right-radius: 4px;
+    }
+    .balon.bot {
         background: #262637;
-        border-radius: 12px;
-        padding: 14px 18px;
-        margin-bottom: 12px;
-        border: 1px solid #313145;
-    }
-    [data-testid="stChatMessageContent"] {
         color: #e0e0e0;
-        line-height: 1.6;
+        border-bottom-left-radius: 4px;
     }
+    .zaman {
+        font-size: 0.68em;
+        color: #a0a0a0;
+        margin-top: 4px;
+        text-align: right;
+        display: block;
+    }
+    .balon.bot .zaman { text-align: left; }
+    
     .stChatInput textarea {
         background: #262637 !important;
         color: #e0e0e0 !important;
         border: 1px solid #313145 !important;
         border-radius: 12px !important;
-        font-size: 1em !important;
     }
     .stChatInput textarea:focus {
         border-color: #4d6bfe !important;
-        box-shadow: 0 0 0 3px rgba(77, 107, 254, 0.15) !important;
-    }
-    .stChatInput textarea::placeholder {
-        color: #7a7a8e !important;
     }
     section[data-testid="stSidebar"] {
         background: #181825;
         border-right: 1px solid #262637;
     }
-    section[data-testid="stSidebar"] * {
-        color: #d0d0dc !important;
-    }
-    section[data-testid="stSidebar"] h2 {
-        color: #4d6bfe !important;
-        font-weight: 600;
-    }
+    section[data-testid="stSidebar"] * { color: #d0d0dc !important; }
+    section[data-testid="stSidebar"] h2 { color: #4d6bfe !important; }
+    
     .stButton button {
         background: #262637;
         color: #e0e0e0;
@@ -213,14 +237,10 @@ st.markdown("""
         border-radius: 10px;
         font-weight: 500;
         width: 100%;
-        padding: 10px;
-        transition: all 0.2s;
     }
     .stButton button:hover {
         background: #313145;
         border-color: #4d6bfe;
-        color: #ffffff;
-        transform: translateY(-1px);
     }
     .stDownloadButton button {
         background: #4d6bfe;
@@ -229,11 +249,6 @@ st.markdown("""
         border-radius: 10px;
         font-size: 0.85em;
         padding: 6px 12px;
-        font-weight: 600;
-    }
-    .stDownloadButton button:hover {
-        background: #3a56e0;
-        transform: scale(1.02);
     }
     .kullanici-bilgi {
         text-align: center;
@@ -252,49 +267,18 @@ st.markdown("""
         border: 1px solid #313145 !important;
         border-radius: 10px !important;
     }
-    .stSelectbox div[data-baseweb="select"] > div:hover {
-        border-color: #4d6bfe !important;
-    }
-    .stSlider [data-baseweb="slider"] {
-        background: #4d6bfe !important;
-    }
-    .stMarkdown h2 {
-        color: #4d6bfe !important;
-        font-weight: 600;
-    }
-    .stMarkdown h3 {
-        color: #7a8fff !important;
-        font-weight: 600;
-    }
-    .stMarkdown, .stCaption, p, span, label {
-        color: #d0d0dc;
-    }
+    .stMarkdown h2 { color: #4d6bfe !important; }
+    .stMarkdown h3 { color: #7a8fff !important; }
+    .stMarkdown, .stCaption, p, span, label { color: #d0d0dc; }
     code {
         background: #181825 !important;
         color: #7a8fff !important;
         padding: 2px 6px;
         border-radius: 6px;
-        border: 1px solid #313145;
     }
-    pre {
-        background: #181825 !important;
-        border: 1px solid #313145 !important;
-        border-radius: 10px !important;
-    }
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #181825;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #4d6bfe;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #7a8fff;
-    }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #181825; }
+    ::-webkit-scrollbar-thumb { background: #4d6bfe; border-radius: 4px; }
     img {
         display: block;
         margin-left: auto;
@@ -306,19 +290,6 @@ st.markdown("""
         border-radius: 10px !important;
         border-left: 4px solid #4d6bfe !important;
         color: #e0e0e0 !important;
-    }
-    .stToggle {
-        color: #e0e0e0 !important;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        background: #262637;
-        border-radius: 10px;
-        padding: 4px;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #4d6bfe !important;
-        color: white !important;
-        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -426,6 +397,36 @@ def gorsel_olustur(prompt, genislik, yukseklik, seed=0):
     except Exception:
         return None
 
+# --- WHATSAPP TARZI MESAJ GÖSTERİMİ ---
+def mesaj_goster(mesajlar):
+    html = '<div class="whatsapp-container">'
+    for m in mesajlar:
+        if not isinstance(m["content"], str):
+            continue
+        icerik = m["content"].replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+        zaman = datetime.now().strftime("%H:%M")
+        
+        if m["role"] == "user":
+            html += f'''
+            <div class="mesaj-satir sag">
+                <div class="balon kullanici">
+                    {icerik}
+                    <span class="zaman">{zaman} ✓✓</span>
+                </div>
+            </div>
+            '''
+        else:
+            html += f'''
+            <div class="mesaj-satir sol">
+                <div class="balon bot">
+                    {icerik}
+                    <span class="zaman">{zaman}</span>
+                </div>
+            </div>
+            '''
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
+
 # --- SESSION STATE ---
 if "aktif_sohbet_id" not in st.session_state:
     st.session_state.aktif_sohbet_id = yeni_sohbet()
@@ -511,82 +512,75 @@ with st.sidebar:
         else:
             genislik, yukseklik = 720, 1280
 
-# --- HOŞGELDİN ---
+# --- HOŞGELDİN / ESKİ MESAJLAR ---
 if not st.session_state.mesajlar:
     with st.chat_message("assistant", avatar="🔥"):
         st.markdown(T["hosgeldin"])
-
-# --- ESKİ MESAJLAR ---
-for m in st.session_state.mesajlar:
-    avatar = "👤" if m["role"] == "user" else "🔥"
-    with st.chat_message(m["role"], avatar=avatar):
-        if isinstance(m["content"], str):
-            st.markdown(m["content"])
+else:
+    mesaj_goster(st.session_state.mesajlar)
 
 # --- GİRİŞ ---
 if soru := st.chat_input(T["sor"]):
     st.session_state.mesajlar.append({"role": "user", "content": soru})
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(soru)
     
-    with st.chat_message("assistant", avatar="🔥"):
-        if gorsel_modu:
-            with st.spinner(T["gorsel_olusturuluyor"]):
-                st.markdown(f"**{soru}**")
-                
-                gorseller = []
-                for i in range(gorsel_sayisi):
-                    veri = gorsel_olustur(soru, genislik, yukseklik, seed=i*1000)
-                    if veri:
-                        gorseller.append(veri)
-                
-                if gorseller:
-                    if len(gorseller) == 1:
-                        st.image(BytesIO(gorseller[0]), use_container_width=True)
-                        st.download_button(
-                            label=T["indir"],
-                            data=gorseller[0],
-                            file_name="blazegpt_1.png",
-                            mime="image/png"
-                        )
-                    else:
-                        for i in range(0, len(gorseller), 2):
-                            cols = st.columns(2)
-                            for j, col in enumerate(cols):
-                                idx = i + j
-                                if idx < len(gorseller):
-                                    with col:
-                                        st.image(BytesIO(gorseller[idx]), use_container_width=True)
-                                        st.download_button(
-                                            label=T["indir"],
-                                            data=gorseller[idx],
-                                            file_name=f"blazegpt_{idx+1}.png",
-                                            mime="image/png",
-                                            key=f"indir_{idx}"
-                                        )
-                    cevap = f"🖼️ {len(gorseller)} görsel oluşturuldu: {soru}"
+    # Kullanıcı mesajını göster
+    mesaj_goster([{"role": "user", "content": soru}])
+    
+    cevap = ""
+    if gorsel_modu:
+        with st.spinner(T["gorsel_olusturuluyor"]):
+            gorseller = []
+            for i in range(gorsel_sayisi):
+                veri = gorsel_olustur(soru, genislik, yukseklik, seed=i*1000)
+                if veri:
+                    gorseller.append(veri)
+            
+            if gorseller:
+                if len(gorseller) == 1:
+                    st.image(BytesIO(gorseller[0]), use_container_width=True)
+                    st.download_button(
+                        label=T["indir"],
+                        data=gorseller[0],
+                        file_name="blazegpt_1.png",
+                        mime="image/png"
+                    )
                 else:
-                    st.error(T["gorsel_hata"])
-                    cevap = T["gorsel_hata"]
-        else:
-            yer = st.empty()
-            tam = ""
-            try:
-                stream = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "system", "content": kisi}]
-                             + st.session_state.mesajlar,
-                    stream=True
-                )
-                for parca in stream:
-                    icerik = parca.choices[0].delta.content or ""
-                    tam += icerik
-                    yer.markdown(tam + "▌")
-                yer.markdown(tam)
-                cevap = tam
-            except Exception as e:
-                yer.error(f"{T['hata']}: {e}")
-                cevap = "Hata"
+                    for i in range(0, len(gorseller), 2):
+                        cols = st.columns(2)
+                        for j, col in enumerate(cols):
+                            idx = i + j
+                            if idx < len(gorseller):
+                                with col:
+                                    st.image(BytesIO(gorseller[idx]), use_container_width=True)
+                                    st.download_button(
+                                        label=T["indir"],
+                                        data=gorseller[idx],
+                                        file_name=f"blazegpt_{idx+1}.png",
+                                        mime="image/png",
+                                        key=f"indir_{idx}"
+                                    )
+                cevap = f"🖼️ {len(gorseller)} görsel oluşturuldu: {soru}"
+            else:
+                st.error(T["gorsel_hata"])
+                cevap = T["gorsel_hata"]
+    else:
+        tam = ""
+        try:
+            stream = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": kisi}]
+                         + st.session_state.mesajlar,
+                stream=True
+            )
+            for parca in stream:
+                icerik = parca.choices[0].delta.content or ""
+                tam += icerik
+            cevap = tam
+        except Exception as e:
+            cevap = f"{T['hata']}: {e}"
+        
+        # Bot cevabını göster
+        mesaj_goster([{"role": "assistant", "content": cevap}])
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
