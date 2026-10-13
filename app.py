@@ -149,14 +149,14 @@ CEVIRI = {
     }
 }
 
-# --- ÖZEL CSS (WHATSAPP + DEEPSEEK TEMASI) ---
+# --- ÖZEL CSS (WHATSAPP + DEEPSEEK TEMASI - SIKI BOŞLUK) ---
 st.markdown("""
 <style>
     .stApp { background: #1e1e2e; }
     .ana-baslik {
         text-align: center;
         color: #4d6bfe;
-        font-size: 2.8em;
+        font-size: 2.5em;
         font-weight: 700;
         margin-bottom: 0;
     }
@@ -164,36 +164,38 @@ st.markdown("""
         text-align: center;
         color: #7a7a8e;
         margin-top: 0;
-        margin-bottom: 30px;
-        font-size: 0.95em;
+        margin-bottom: 15px;
+        font-size: 0.9em;
     }
     
-    /* WhatsApp tarzı sohbet alanı */
+    /* WhatsApp tarzı sohbet alanı - SIKI BOŞLUK */
     .whatsapp-container {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        padding: 16px 8px;
+        gap: 2px;
+        padding: 8px 4px;
         background: #1e1e2e;
-        border-radius: 15px;
-        min-height: 300px;
+        min-height: 200px;
     }
     .mesaj-satir {
         display: flex;
         width: 100%;
-        margin-bottom: 4px;
+        margin: 0;
+        padding: 0;
+        line-height: 0;
     }
     .mesaj-satir.sag { justify-content: flex-end; }
     .mesaj-satir.sol { justify-content: flex-start; }
     
     .balon {
-        max-width: 75%;
-        padding: 10px 14px 6px 14px;
-        border-radius: 18px;
+        max-width: 78%;
+        padding: 8px 12px 4px 12px;
+        border-radius: 16px;
         font-size: 0.95em;
-        line-height: 1.5;
+        line-height: 1.4;
         word-wrap: break-word;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        margin: 0;
     }
     .balon.kullanici {
         background: #005c4b;
@@ -206,13 +208,29 @@ st.markdown("""
         border-bottom-left-radius: 4px;
     }
     .zaman {
-        font-size: 0.68em;
+        font-size: 0.65em;
         color: #a0a0a0;
-        margin-top: 4px;
+        margin-top: 2px;
         text-align: right;
         display: block;
+        line-height: 1;
     }
     .balon.bot .zaman { text-align: left; }
+    
+    /* Streamlit mesaj aralarındaki boşluğu sıfırla */
+    [data-testid="stChatMessage"] {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    .element-container {
+        margin-bottom: 0 !important;
+    }
+    .stMarkdown {
+        margin-bottom: 0 !important;
+    }
     
     .stChatInput textarea {
         background: #262637 !important;
@@ -237,6 +255,7 @@ st.markdown("""
         border-radius: 10px;
         font-weight: 500;
         width: 100%;
+        padding: 6px 10px;
     }
     .stButton button:hover {
         background: #313145;
@@ -248,16 +267,16 @@ st.markdown("""
         border: none;
         border-radius: 10px;
         font-size: 0.85em;
-        padding: 6px 12px;
+        padding: 5px 10px;
     }
     .kullanici-bilgi {
         text-align: center;
         background: linear-gradient(90deg, #4d6bfe 0%, #7a8fff 100%);
         color: white;
-        padding: 8px 16px;
+        padding: 6px 14px;
         border-radius: 10px;
-        font-size: 0.8em;
-        margin-bottom: 12px;
+        font-size: 0.78em;
+        margin-bottom: 10px;
         font-weight: 600;
     }
     .stSelectbox div[data-baseweb="select"] > div,
@@ -407,23 +426,9 @@ def mesaj_goster(mesajlar):
         zaman = datetime.now().strftime("%H:%M")
         
         if m["role"] == "user":
-            html += f'''
-            <div class="mesaj-satir sag">
-                <div class="balon kullanici">
-                    {icerik}
-                    <span class="zaman">{zaman} ✓✓</span>
-                </div>
-            </div>
-            '''
+            html += f'<div class="mesaj-satir sag"><div class="balon kullanici">{icerik}<span class="zaman">{zaman} ✓✓</span></div></div>'
         else:
-            html += f'''
-            <div class="mesaj-satir sol">
-                <div class="balon bot">
-                    {icerik}
-                    <span class="zaman">{zaman}</span>
-                </div>
-            </div>
-            '''
+            html += f'<div class="mesaj-satir sol"><div class="balon bot">{icerik}<span class="zaman">{zaman}</span></div></div>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -439,7 +444,7 @@ T = CEVIRI[st.session_state.dil]
 # --- BAŞLIK ---
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
-    st.image("logo.png", width=120)
+    st.image("logo.png", width=100)
 st.markdown(f'<h1 class="ana-baslik">{T["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=True)
 
