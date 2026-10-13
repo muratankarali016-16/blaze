@@ -20,7 +20,7 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Kişilik",
         "gorsel_modu": "🎨 Görsel Oluşturma",
         "gorsel_olusturuluyor": "🎨 Görsel oluşturuluyor...",
-        "hosgeldin": "### Merhaba! Ben BlazeGPT 🔥\n\n- 💬 Sohbet edebilirsin\n- 🎨 Görsel modunu açıp görsel oluşturabilirsin\n- 💾 Sohbetlerin **otomatik kaydedilir** ve **sadece sana özeldir** 🔒\n\n**Hadi başlayalım!** ⬇️",
+        "hosgeldin": "Merhaba! Ben **BlazeGPT** 🔥\n\nSohbet edebilir, görsel oluşturabilirsin. Sohbetlerin otomatik kaydedilir ve sadece sana özeldir 🔒",
         "sor": "Bir şey sor...",
         "kisilikler": {
             "Normal Asistan": "Sen yardımcı, nazik ve zeki bir asistansın. Türkçe cevap ver.",
@@ -47,7 +47,7 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Personality",
         "gorsel_modu": "🎨 Image Generation",
         "gorsel_olusturuluyor": "🎨 Generating image...",
-        "hosgeldin": "### Hello! I'm BlazeGPT 🔥\n\n- 💬 You can chat\n- 🎨 Turn on image mode\n- 💾 Your chats are **auto-saved** and **only for you** 🔒\n\n**Let's start!** ⬇️",
+        "hosgeldin": "Hello! I'm **BlazeGPT** 🔥\n\nYou can chat and generate images. Chats are auto-saved and private 🔒",
         "sor": "Ask something...",
         "kisilikler": {
             "Normal Assistant": "You are a helpful, kind, and smart assistant. Answer in English.",
@@ -74,7 +74,7 @@ CEVIRI = {
         "model": "🧠 Modell", "kisilik": "🎭 Persönlichkeit",
         "gorsel_modu": "🎨 Bildgenerierung",
         "gorsel_olusturuluyor": "🎨 Bild wird generiert...",
-        "hosgeldin": "### Hallo! Ich bin BlazeGPT 🔥\n\n- 💬 Du kannst chatten\n- 🎨 Aktiviere den Bildmodus\n- 💾 Deine Chats werden **automatisch gespeichert** und sind **nur für dich** 🔒\n\n**Los geht's!** ⬇️",
+        "hosgeldin": "Hallo! Ich bin **BlazeGPT** 🔥\n\nDu kannst chatten und Bilder generieren. Chats werden automatisch gespeichert 🔒",
         "sor": "Frag etwas...",
         "kisilikler": {
             "Normaler Assistent": "Du bist ein hilfsbereiter, freundlicher und kluger Assistent. Antworte auf Deutsch.",
@@ -101,7 +101,7 @@ CEVIRI = {
         "model": "🧠 Modèle", "kisilik": "🎭 Personnalité",
         "gorsel_modu": "🎨 Génération d'images",
         "gorsel_olusturuluyor": "🎨 Génération de l'image...",
-        "hosgeldin": "### Bonjour ! Je suis BlazeGPT 🔥\n\n- 💬 Tu peux discuter\n- 🎨 Active le mode image\n- 💾 Tes discussions sont **auto-sauvegardées** et **rien que pour toi** 🔒\n\n**Commençons !** ⬇️",
+        "hosgeldin": "Bonjour ! Je suis **BlazeGPT** 🔥\n\nTu peux discuter et générer des images. Discussions auto-sauvegardées 🔒",
         "sor": "Pose une question...",
         "kisilikler": {
             "Assistant Normal": "Tu es un assistant utile, gentil et intelligent. Réponds en français.",
@@ -128,7 +128,7 @@ CEVIRI = {
         "model": "🧠 Modelo", "kisilik": "🎭 Personalidad",
         "gorsel_modu": "🎨 Generación de imágenes",
         "gorsel_olusturuluyor": "🎨 Generando imagen...",
-        "hosgeldin": "### ¡Hola! Soy BlazeGPT 🔥\n\n- 💬 Puedes chatear\n- 🎨 Activa el modo imagen\n- 💾 Tus chats se **guardan automáticamente** y son **solo para ti** 🔒\n\n**¡Empecemos!** ⬇️",
+        "hosgeldin": "¡Hola! Soy **BlazeGPT** 🔥\n\nPuedes chatear y generar imágenes. Chats auto-guardados 🔒",
         "sor": "Pregunta algo...",
         "kisilikler": {
             "Asistente Normal": "Eres un asistente útil, amable e inteligente. Responde en español.",
@@ -149,16 +149,25 @@ CEVIRI = {
     }
 }
 
-# --- ÖZEL CSS (WHATSAPP + DEEPSEEK TEMASI - SIKI BOŞLUK) ---
+# --- ÖZEL CSS (WHATSAPP + DEEPSEEK) ---
 st.markdown("""
 <style>
+    /* Streamlit boşluklarını sıfırla */
+    .element-container, .stMarkdown, div[data-testid="stVerticalBlock"] > div {
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }
+    
     .stApp { background: #1e1e2e; }
+    
     .ana-baslik {
         text-align: center;
         color: #4d6bfe;
         font-size: 2.5em;
         font-weight: 700;
         margin-bottom: 0;
+        margin-top: 10px;
     }
     .alt-baslik {
         text-align: center;
@@ -168,21 +177,15 @@ st.markdown("""
         font-size: 0.9em;
     }
     
-    /* WhatsApp tarzı sohbet alanı - SIKI BOŞLUK */
-    .whatsapp-container {
+    .sohbet-alani {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        padding: 8px 4px;
-        background: #1e1e2e;
-        min-height: 200px;
+        gap: 3px;
+        padding: 10px 5px;
     }
     .mesaj-satir {
         display: flex;
         width: 100%;
-        margin: 0;
-        padding: 0;
-        line-height: 0;
     }
     .mesaj-satir.sag { justify-content: flex-end; }
     .mesaj-satir.sol { justify-content: flex-start; }
@@ -195,7 +198,6 @@ st.markdown("""
         line-height: 1.4;
         word-wrap: break-word;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-        margin: 0;
     }
     .balon.kullanici {
         background: #005c4b;
@@ -216,21 +218,6 @@ st.markdown("""
         line-height: 1;
     }
     .balon.bot .zaman { text-align: left; }
-    
-    /* Streamlit mesaj aralarındaki boşluğu sıfırla */
-    [data-testid="stChatMessage"] {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-    .element-container {
-        margin-bottom: 0 !important;
-    }
-    .stMarkdown {
-        margin-bottom: 0 !important;
-    }
     
     .stChatInput textarea {
         background: #262637 !important;
@@ -256,6 +243,7 @@ st.markdown("""
         font-weight: 500;
         width: 100%;
         padding: 6px 10px;
+        margin: 2px 0;
     }
     .stButton button:hover {
         background: #313145;
@@ -288,7 +276,6 @@ st.markdown("""
     }
     .stMarkdown h2 { color: #4d6bfe !important; }
     .stMarkdown h3 { color: #7a8fff !important; }
-    .stMarkdown, .stCaption, p, span, label { color: #d0d0dc; }
     code {
         background: #181825 !important;
         color: #7a8fff !important;
@@ -316,11 +303,10 @@ st.markdown("""
 # --- API ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- KULLANICI OTURUM ID ---
+# --- KULLANICI ID ---
 if "kullanici_id" not in st.session_state:
     st.session_state.kullanici_id = str(uuid.uuid4())[:8]
 
-# --- DİL ---
 if "dil" not in st.session_state:
     st.session_state.dil = "tr"
 
@@ -404,7 +390,7 @@ def sohbet_sil(sid):
     conn.commit()
     conn.close()
 
-# --- GÖRSEL OLUŞTURMA ---
+# --- GÖRSEL ---
 def gorsel_olustur(prompt, genislik, yukseklik, seed=0):
     try:
         url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}"
@@ -416,9 +402,11 @@ def gorsel_olustur(prompt, genislik, yukseklik, seed=0):
     except Exception:
         return None
 
-# --- WHATSAPP TARZI MESAJ GÖSTERİMİ ---
-def mesaj_goster(mesajlar):
-    html = '<div class="whatsapp-container">'
+# --- MESAJ GÖSTER (TEK BLOK) ---
+def mesajlari_goster(mesajlar):
+    if not mesajlar:
+        return
+    html = '<div class="sohbet-alani">'
     for m in mesajlar:
         if not isinstance(m["content"], str):
             continue
@@ -432,7 +420,7 @@ def mesaj_goster(mesajlar):
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
-# --- SESSION STATE ---
+# --- SESSION ---
 if "aktif_sohbet_id" not in st.session_state:
     st.session_state.aktif_sohbet_id = yeni_sohbet()
 
@@ -517,20 +505,24 @@ with st.sidebar:
         else:
             genislik, yukseklik = 720, 1280
 
-# --- HOŞGELDİN / ESKİ MESAJLAR ---
+# --- MESAJLARI GÖSTER (TEK BLOK) ---
 if not st.session_state.mesajlar:
-    with st.chat_message("assistant", avatar="🔥"):
-        st.markdown(T["hosgeldin"])
+    st.markdown(f"""
+    <div class="sohbet-alani">
+        <div class="mesaj-satir sol">
+            <div class="balon bot">{T["hosgeldin"]}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 else:
-    mesaj_goster(st.session_state.mesajlar)
+    mesajlari_goster(st.session_state.mesajlar)
 
 # --- GİRİŞ ---
 if soru := st.chat_input(T["sor"]):
+    # Kullanıcı mesajını ekle
     st.session_state.mesajlar.append({"role": "user", "content": soru})
     
-    # Kullanıcı mesajını göster
-    mesaj_goster([{"role": "user", "content": soru}])
-    
+    # Cevap üret
     cevap = ""
     if gorsel_modu:
         with st.spinner(T["gorsel_olusturuluyor"]):
@@ -541,6 +533,11 @@ if soru := st.chat_input(T["sor"]):
                     gorseller.append(veri)
             
             if gorseller:
+                cevap = f"🖼️ {len(gorseller)} görsel oluşturuldu: {soru}"
+                st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+                sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+                
+                # Görselleri göster
                 if len(gorseller) == 1:
                     st.image(BytesIO(gorseller[0]), use_container_width=True)
                     st.download_button(
@@ -564,10 +561,12 @@ if soru := st.chat_input(T["sor"]):
                                         mime="image/png",
                                         key=f"indir_{idx}"
                                     )
-                cevap = f"🖼️ {len(gorseller)} görsel oluşturuldu: {soru}"
+                st.rerun()
             else:
-                st.error(T["gorsel_hata"])
                 cevap = T["gorsel_hata"]
+                st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+                sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+                st.rerun()
     else:
         tam = ""
         try:
@@ -584,8 +583,6 @@ if soru := st.chat_input(T["sor"]):
         except Exception as e:
             cevap = f"{T['hata']}: {e}"
         
-        # Bot cevabını göster
-        mesaj_goster([{"role": "assistant", "content": cevap}])
-    
-    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+        st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+        sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+        st.rerun()
