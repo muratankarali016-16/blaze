@@ -188,10 +188,9 @@ st.markdown("""
 # --- API ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- KULLANICI OTURUM ID (Benzersiz) ---
+# --- KULLANICI OTURUM ID ---
 if "kullanici_id" not in st.session_state:
     st.session_state.kullanici_id = str(uuid.uuid4())[:8]
-    # Kısa ve benzersiz bir ID (ör: "a3f9b2c1")
 
 # --- DİL ---
 if "dil" not in st.session_state:
@@ -211,11 +210,6 @@ def db_olustur():
             baslik TEXT, olusturma TEXT, guncelleme TEXT, mesajlar TEXT
         )
     """)
-    # Eski tabloyu kontrol et ve kullanici_id kolonu ekle (yoksa)
-    try:
-        c.execute("ALTER TABLE sohbetler ADD COLUMN kullanici_id TEXT")
-    except sqlite3.OperationalError:
-        pass  # Zaten var
     conn.commit()
     conn.close()
 
@@ -237,7 +231,6 @@ def yeni_sohbet(baslik="Yeni Sohbet"):
 def sohbet_getir(sid):
     conn = db_baglantisi()
     c = conn.cursor()
-    # SADECE kendi sohbetini getir
     c.execute(
         "SELECT mesajlar FROM sohbetler WHERE id = ? AND kullanici_id = ?",
         (sid, st.session_state.kullanici_id)
@@ -255,7 +248,6 @@ def sohbet_guncelle(sid, mesajlar):
         if m["role"] == "user" and isinstance(m["content"], str):
             baslik = m["content"][:40] + ("..." if len(m["content"]) > 40 else "")
             break
-    # SADECE kendi sohbetini güncelle
     c.execute(
         "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ? AND kullanici_id = ?",
         (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid, st.session_state.kullanici_id)
@@ -266,7 +258,6 @@ def sohbet_guncelle(sid, mesajlar):
 def tum_sohbetler():
     conn = db_baglantisi()
     c = conn.cursor()
-    # SADECE kendi sohbetlerini getir
     c.execute(
         "SELECT id, baslik, guncelleme FROM sohbetler WHERE kullanici_id = ? ORDER BY guncelleme DESC",
         (st.session_state.kullanici_id,)
@@ -278,7 +269,6 @@ def tum_sohbetler():
 def sohbet_sil(sid):
     conn = db_baglantisi()
     c = conn.cursor()
-    # SADECE kendi sohbetini sil
     c.execute(
         "DELETE FROM sohbetler WHERE id = ? AND kullanici_id = ?",
         (sid, st.session_state.kullanici_id)
@@ -316,7 +306,6 @@ st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=Tr
 
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
-    # KULLANICI BİLGİSİ
     st.markdown(
         f'<div class="kullanici-bilgi">🔒 Oturum: {st.session_state.kullanici_id}</div>',
         unsafe_allow_html=True
