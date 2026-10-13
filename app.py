@@ -10,7 +10,7 @@ import uuid
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="BlazeGPT", page_icon="🔥", layout="centered")
 
-# --- ÇEVİRİ SÖZLÜĞÜ ---
+# --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
         "dil_adi": "🇹🇷 Türkçe", "baslik": "BlazeGPT",
@@ -32,15 +32,12 @@ CEVIRI = {
         "kisilik_isimleri": ["Normal Asistan", "Öğretmen", "Şair", "Kod Yazıcı", "Komedyen"],
         "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
         "gorsel_ayarlari": "🖼️ Görsel Ayarları",
-        "gorsel_sayisi": "Görsel Sayısı",
-        "gorsel_boyut": "Boyut",
-        "kare": "⬛ Kare (1024x1024)",
-        "yatay": "▬ Yatay (1280x720)",
-        "dikey": "▮ Dikey (720x1280)",
-        "indir": "💾 İndir",
-        "tema": "🎨 Tema",
-        "galeri": "🖼️ Galeri",
-        "galeri_bos": "Henüz kaydedilmiş görsel yok"
+        "gorsel_sayisi": "Görsel Sayısı", "gorsel_boyut": "Boyut",
+        "kare": "⬛ Kare (1024x1024)", "yatay": "▬ Yatay (1280x720)", "dikey": "▮ Dikey (720x1280)",
+        "indir": "💾 İndir", "tema": "🎨 Tema", "galeri": "🖼️ Galeri",
+        "galeri_bos": "Henüz kaydedilmiş görsel yok",
+        "kopyala": "📋 Kopyala", "kopyalandi": "✅ Kopyalandı",
+        "kopyalanacak": "📋 Kopyalanacak Metin", "kapat": "❌ Kapat"
     },
     "en": {
         "dil_adi": "🇬🇧 English", "baslik": "BlazeGPT",
@@ -62,15 +59,12 @@ CEVIRI = {
         "kisilik_isimleri": ["Normal Assistant", "Teacher", "Poet", "Coder", "Comedian"],
         "hata": "⚠️ Error", "gorsel_hata": "Could not generate image.",
         "gorsel_ayarlari": "🖼️ Image Settings",
-        "gorsel_sayisi": "Number of Images",
-        "gorsel_boyut": "Size",
-        "kare": "⬛ Square (1024x1024)",
-        "yatay": "▬ Landscape (1280x720)",
-        "dikey": "▮ Portrait (720x1280)",
-        "indir": "💾 Download",
-        "tema": "🎨 Theme",
-        "galeri": "🖼️ Gallery",
-        "galeri_bos": "No saved images yet"
+        "gorsel_sayisi": "Number of Images", "gorsel_boyut": "Size",
+        "kare": "⬛ Square (1024x1024)", "yatay": "▬ Landscape (1280x720)", "dikey": "▮ Portrait (720x1280)",
+        "indir": "💾 Download", "tema": "🎨 Theme", "galeri": "🖼️ Gallery",
+        "galeri_bos": "No saved images yet",
+        "kopyala": "📋 Copy", "kopyalandi": "✅ Copied",
+        "kopyalanacak": "📋 Text to Copy", "kapat": "❌ Close"
     }
 }
 
@@ -79,7 +73,7 @@ TEMALAR = {
     "deepseek": {"ad": "🔵 DeepSeek", "arka": "#1e1e2e", "kenar": "#181825", "balon": "#262637", "vurgu": "#4d6bfe", "metin": "#e0e0e0", "kullanici_balon": "#005c4b"},
     "chatgpt": {"ad": "🟢 ChatGPT", "arka": "#212121", "kenar": "#171717", "balon": "#2f2f2f", "vurgu": "#10a37f", "metin": "#ececec", "kullanici_balon": "#0d5c4f"},
     "blaze": {"ad": "🔥 Blaze", "arka": "#0f0f0f", "kenar": "#1a0f08", "balon": "#1a1a1a", "vurgu": "#ff6b35", "metin": "#e8e8e8", "kullanici_balon": "#8b2500"},
-    "gece": {"ad": "🌙 Gece Mavisi", "arka": "#0a1929", "kenar": "#061220", "balon": "#132f4c", "vurgu": "#5090d3", "metin": "#e7ebf0", "kullanici_balon": "#0d4770"},
+    "gece": {"ad": "🌙 Gece", "arka": "#0a1929", "kenar": "#061220", "balon": "#132f4c", "vurgu": "#5090d3", "metin": "#e7ebf0", "kullanici_balon": "#0d4770"},
     "mor": {"ad": "🟣 Mor", "arka": "#1a0f2e", "kenar": "#100820", "balon": "#2a1a45", "vurgu": "#a855f7", "metin": "#e8e0f0", "kullanici_balon": "#6b21a8"}
 }
 
@@ -90,6 +84,8 @@ if "dil" not in st.session_state:
     st.session_state.dil = "tr"
 if "tema" not in st.session_state:
     st.session_state.tema = "deepseek"
+if "kopyalanacak" not in st.session_state:
+    st.session_state.kopyalanacak = ""
 
 # --- VERİTABANI ---
 def db_baglantisi():
@@ -194,7 +190,7 @@ def tema_uygula(tema_adi):
         .stApp {{ background: {t['arka']}; }}
         .ana-baslik {{ text-align: center; color: {t['vurgu']}; font-size: 2.5em; font-weight: 700; margin-bottom: 0; margin-top: 10px; }}
         .alt-baslik {{ text-align: center; color: #7a7a8e; margin-top: 0; margin-bottom: 15px; font-size: 0.9em; }}
-        .sohbet-alani {{ display: flex; flex-direction: column; gap: 3px; padding: 10px 5px; }}
+        .sohbet-alani {{ display: flex; flex-direction: column; gap: 3px; padding: 5px; }}
         .mesaj-satir {{ display: flex; width: 100%; }}
         .mesaj-satir.sag {{ justify-content: flex-end; }}
         .mesaj-satir.sol {{ justify-content: flex-start; }}
@@ -235,7 +231,7 @@ if "mesajlar" not in st.session_state:
 
 T = CEVIRI[st.session_state.dil]
 
-# --- TEMA UYGULA ---
+# --- TEMA ---
 tema_uygula(st.session_state.tema)
 
 # --- BAŞLIK ---
@@ -312,30 +308,41 @@ with st.sidebar:
         else:
             genislik, yukseklik = 720, 1280
 
+# --- KOPYALAMA ALANI ---
+if st.session_state.kopyalanacak:
+    st.markdown(f"### {T['kopyalanacak']}")
+    st.code(st.session_state.kopyalanacak, language=None)
+    if st.button(T["kapat"]):
+        st.session_state.kopyalanacak = ""
+        st.rerun()
+    st.markdown("---")
+
 # --- SEKMELER ---
 tab1, tab2 = st.tabs(["💬 Sohbet", T["galeri"]])
-
-def mesajlari_goster(mesajlar):
-    if not mesajlar:
-        return
-    html = '<div class="sohbet-alani">'
-    for m in mesajlar:
-        if not isinstance(m["content"], str):
-            continue
-        icerik = m["content"].replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-        zaman = datetime.now().strftime("%H:%M")
-        if m["role"] == "user":
-            html += f'<div class="mesaj-satir sag"><div class="balon kullanici">{icerik}<span class="zaman">{zaman} ✓✓</span></div></div>'
-        else:
-            html += f'<div class="mesaj-satir sol"><div class="balon bot">{icerik}<span class="zaman">{zaman}</span></div></div>'
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
 
 with tab1:
     if not st.session_state.mesajlar:
         st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{T["hosgeldin"]}</div></div></div>', unsafe_allow_html=True)
     else:
-        mesajlari_goster(st.session_state.mesajlar)
+        for i, m in enumerate(st.session_state.mesajlar):
+            if not isinstance(m["content"], str):
+                continue
+            icerik_html = m["content"].replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+            zaman = datetime.now().strftime("%H:%M")
+            
+            if m["role"] == "user":
+                html = f'<div class="sohbet-alani"><div class="mesaj-satir sag"><div class="balon kullanici">{icerik_html}<span class="zaman">{zaman} ✓✓</span></div></div></div>'
+                st.markdown(html, unsafe_allow_html=True)
+            else:
+                html = f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{icerik_html}<span class="zaman">{zaman}</span></div></div></div>'
+                st.markdown(html, unsafe_allow_html=True)
+            
+            # Her mesajın altına kopyalama butonu
+            c1, c2, c3 = st.columns([1, 1, 8])
+            with c1:
+                if st.button("📋", key=f"kopya_{i}", help=T["kopyala"]):
+                    st.session_state.kopyalanacak = m["content"]
+                    st.rerun()
     
     if soru := st.chat_input(T["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
