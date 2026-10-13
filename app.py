@@ -2,10 +2,9 @@ import streamlit as st
 from groq import Groq
 import sqlite3
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
 from io import BytesIO
-import pandas as pd
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="BlazeGPT", page_icon="🔥", layout="centered")
@@ -30,11 +29,7 @@ CEVIRI = {
             "Komedyen": "Sen esprili bir komedyensin. Mizah katarsın. Türkçe cevap ver."
         },
         "kisilik_isimleri": ["Normal Asistan", "Öğretmen", "Şair", "Kod Yazıcı", "Komedyen"],
-        "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
-        "analitik": "📊 Analitik", "toplam_sohbet": "Toplam Sohbet",
-        "toplam_mesaj": "Toplam Mesaj", "kullanilan_diller": "Kullanılan Diller",
-        "en_cok_kisilik": "En Çok Seçilen Kişilik", "gunluk_kullanim": "Günlük Kullanım",
-        "son_aktiviteler": "Son Aktiviteler"
+        "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı."
     },
     "en": {
         "dil_adi": "🇬🇧 English", "baslik": "BlazeGPT",
@@ -54,11 +49,7 @@ CEVIRI = {
             "Comedian": "You are a funny comedian. Add humor. Answer in English."
         },
         "kisilik_isimleri": ["Normal Assistant", "Teacher", "Poet", "Coder", "Comedian"],
-        "hata": "⚠️ Error", "gorsel_hata": "Could not generate image.",
-        "analitik": "📊 Analytics", "toplam_sohbet": "Total Chats",
-        "toplam_mesaj": "Total Messages", "kullanilan_diller": "Languages Used",
-        "en_cok_kisilik": "Most Used Personality", "gunluk_kullanim": "Daily Usage",
-        "son_aktiviteler": "Recent Activities"
+        "hata": "⚠️ Error", "gorsel_hata": "Could not generate image."
     },
     "de": {
         "dil_adi": "🇩🇪 Deutsch", "baslik": "BlazeGPT",
@@ -78,11 +69,7 @@ CEVIRI = {
             "Komiker": "Du bist ein lustiger Komiker. Füge Humor hinzu. Antworte auf Deutsch."
         },
         "kisilik_isimleri": ["Normaler Assistent", "Lehrer", "Dichter", "Programmierer", "Komiker"],
-        "hata": "⚠️ Fehler", "gorsel_hata": "Bild konnte nicht generiert werden.",
-        "analitik": "📊 Analytik", "toplam_sohbet": "Chats insgesamt",
-        "toplam_mesaj": "Nachrichten insgesamt", "kullanilan_diller": "Verwendete Sprachen",
-        "en_cok_kisilik": "Beliebteste Persönlichkeit", "gunluk_kullanim": "Tägliche Nutzung",
-        "son_aktiviteler": "Letzte Aktivitäten"
+        "hata": "⚠️ Fehler", "gorsel_hata": "Bild konnte nicht generiert werden."
     },
     "fr": {
         "dil_adi": "🇫🇷 Français", "baslik": "BlazeGPT",
@@ -102,11 +89,7 @@ CEVIRI = {
             "Comédien": "Tu es un comédien drôle. Ajoute de l'humour. Réponds en français."
         },
         "kisilik_isimleri": ["Assistant Normal", "Professeur", "Poète", "Programmeur", "Comédien"],
-        "hata": "⚠️ Erreur", "gorsel_hata": "Impossible de générer l'image.",
-        "analitik": "📊 Analytique", "toplam_sohbet": "Total des discussions",
-        "toplam_mesaj": "Total des messages", "kullanilan_diller": "Langues utilisées",
-        "en_cok_kisilik": "Personnalité la plus utilisée", "gunluk_kullanim": "Utilisation quotidienne",
-        "son_aktiviteler": "Activités récentes"
+        "hata": "⚠️ Erreur", "gorsel_hata": "Impossible de générer l'image."
     },
     "es": {
         "dil_adi": "🇪🇸 Español", "baslik": "BlazeGPT",
@@ -126,11 +109,7 @@ CEVIRI = {
             "Comediante": "Eres un comediante divertido. Añade humor. Responde en español."
         },
         "kisilik_isimleri": ["Asistente Normal", "Profesor", "Poeta", "Programador", "Comediante"],
-        "hata": "⚠️ Error", "gorsel_hata": "No se pudo generar la imagen.",
-        "analitik": "📊 Analíticas", "toplam_sohbet": "Total de chats",
-        "toplam_mesaj": "Total de mensajes", "kullanilan_diller": "Idiomas utilizados",
-        "en_cok_kisilik": "Personalidad más usada", "gunluk_kullanim": "Uso diario",
-        "son_aktiviteler": "Actividades recientes"
+        "hata": "⚠️ Error", "gorsel_hata": "No se pudo generar la imagen."
     }
 }
 
@@ -153,13 +132,6 @@ st.markdown("""
         color: white; border: none; border-radius: 20px;
         font-weight: bold; width: 100%;
     }
-    .metrik-kart {
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        color: white; padding: 20px; border-radius: 15px;
-        text-align: center; margin-bottom: 10px;
-    }
-    .metrik-sayi { font-size: 2.5em; font-weight: bold; margin: 0; }
-    .metrik-baslik { font-size: 0.9em; opacity: 0.9; margin: 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,15 +152,7 @@ def db_olustur():
     c.execute("""
         CREATE TABLE IF NOT EXISTS sohbetler (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            baslik TEXT, olusturma TEXT, guncelleme TEXT, mesajlar TEXT,
-            dil TEXT DEFAULT 'tr', kisilik TEXT DEFAULT 'Normal Asistan'
-        )
-    """)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS istatistikler (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tarih TEXT, dil TEXT, kisilik TEXT,
-            mesaj_sayisi INTEGER DEFAULT 0, gorsel_sayisi INTEGER DEFAULT 0
+            baslik TEXT, olusturma TEXT, guncelleme TEXT, mesajlar TEXT
         )
     """)
     conn.commit()
@@ -201,8 +165,8 @@ def yeni_sohbet(baslik="Yeni Sohbet"):
     c = conn.cursor()
     simdi = datetime.now().isoformat()
     c.execute(
-        "INSERT INTO sohbetler (baslik, olusturma, guncelleme, mesajlar, dil, kisilik) VALUES (?, ?, ?, ?, ?, ?)",
-        (baslik, simdi, simdi, "[]", st.session_state.dil, "Normal")
+        "INSERT INTO sohbetler (baslik, olusturma, guncelleme, mesajlar) VALUES (?, ?, ?, ?)",
+        (baslik, simdi, simdi, "[]")
     )
     sid = c.lastrowid
     conn.commit()
@@ -217,7 +181,7 @@ def sohbet_getir(sid):
     conn.close()
     return json.loads(r[0]) if r else []
 
-def sohbet_guncelle(sid, mesajlar, dil=None, kisilik=None):
+def sohbet_guncelle(sid, mesajlar):
     conn = db_baglantisi()
     c = conn.cursor()
     simdi = datetime.now().isoformat()
@@ -226,17 +190,10 @@ def sohbet_guncelle(sid, mesajlar, dil=None, kisilik=None):
         if m["role"] == "user" and isinstance(m["content"], str):
             baslik = m["content"][:40] + ("..." if len(m["content"]) > 40 else "")
             break
-    
-    if dil and kisilik:
-        c.execute(
-            "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ?, dil = ?, kisilik = ? WHERE id = ?",
-            (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, dil, kisilik, sid)
-        )
-    else:
-        c.execute(
-            "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ?",
-            (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid)
-        )
+    c.execute(
+        "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ?",
+        (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid)
+    )
     conn.commit()
     conn.close()
 
@@ -255,68 +212,12 @@ def sohbet_sil(sid):
     conn.commit()
     conn.close()
 
-def istatistik_kaydet(dil, kisilik, mesaj_adedi=1, gorsel_adedi=0):
-    conn = db_baglantisi()
-    c = conn.cursor()
-    bugun = datetime.now().strftime("%Y-%m-%d")
-    c.execute(
-        "INSERT INTO istatistikler (tarih, dil, kisilik, mesaj_sayisi, gorsel_sayisi) VALUES (?, ?, ?, ?, ?)",
-        (bugun, dil, kisilik, mesaj_adedi, gorsel_adedi)
-    )
-    conn.commit()
-    conn.close()
-
-def istatistik_getir():
-    conn = db_baglantisi()
-    
-    # Toplam sohbet
-    toplam_sohbet = pd.read_sql_query("SELECT COUNT(*) as sayi FROM sohbetler", conn).iloc[0]["sayi"]
-    
-    # Toplam mesaj
-    toplam_mesaj = pd.read_sql_query(
-        "SELECT COALESCE(SUM(mesaj_sayisi), 0) as sayi FROM istatistikler", conn
-    ).iloc[0]["sayi"]
-    
-    # Dil dağılımı
-    dil_df = pd.read_sql_query(
-        "SELECT dil, COUNT(*) as sayi FROM istatistikler GROUP BY dil", conn
-    )
-    
-    # Kişilik dağılımı
-    kisi_df = pd.read_sql_query(
-        "SELECT kisilik, COUNT(*) as sayi FROM istatistikler GROUP BY kisilik ORDER BY sayi DESC LIMIT 1", conn
-    )
-    
-    # Günlük kullanım (son 7 gün)
-    gunluk_df = pd.read_sql_query(
-        "SELECT tarih, SUM(mesaj_sayisi) as mesaj FROM istatistikler GROUP BY tarih ORDER BY tarih DESC LIMIT 7", conn
-    )
-    
-    # Son aktiviteler
-    son_df = pd.read_sql_query(
-        "SELECT tarih, dil, kisilik, mesaj_sayisi FROM istatistikler ORDER BY id DESC LIMIT 10", conn
-    )
-    
-    conn.close()
-    
-    return {
-        "toplam_sohbet": toplam_sohbet,
-        "toplam_mesaj": int(toplam_mesaj),
-        "dil_df": dil_df,
-        "en_cok_kisilik": kisi_df.iloc[0]["kisilik"] if len(kisi_df) > 0 else "-",
-        "gunluk_df": gunluk_df,
-        "son_df": son_df
-    }
-
 # --- SESSION STATE ---
 if "aktif_sohbet_id" not in st.session_state:
     st.session_state.aktif_sohbet_id = yeni_sohbet()
 
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = sohbet_getir(st.session_state.aktif_sohbet_id)
-
-if "sayfa" not in st.session_state:
-    st.session_state.sayfa = "sohbet"
 
 T = CEVIRI[st.session_state.dil]
 
@@ -326,19 +227,6 @@ with col2:
     st.image("logo.png", width=120)
 st.markdown(f'<h1 class="ana-baslik">{T["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=True)
-
-# --- SAYFA SEÇİCİ (ÜSTTE) ---
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("💬 Sohbet", use_container_width=True):
-        st.session_state.sayfa = "sohbet"
-        st.rerun()
-with col2:
-    if st.button(T["analitik"], use_container_width=True):
-        st.session_state.sayfa = "analitik"
-        st.rerun()
-
-st.markdown("---")
 
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
@@ -354,161 +242,95 @@ with st.sidebar:
         st.rerun()
     
     st.markdown("---")
-    
-    if st.session_state.sayfa == "sohbet":
-        st.markdown(f"## {T['sohbetler']}")
-        if st.button(T["yeni_sohbet"]):
-            st.session_state.aktif_sohbet_id = yeni_sohbet()
-            st.session_state.mesajlar = []
-            st.rerun()
-        st.markdown("---")
-        sohbetler = tum_sohbetler()
-        if sohbetler:
-            for s_id, s_baslik, s_tarih in sohbetler:
-                c1, c2 = st.columns([5, 1])
-                with c1:
-                    etiket = f"💬 {s_baslik}"
-                    if s_id == st.session_state.aktif_sohbet_id:
-                        etiket = f"✅ {s_baslik}"
-                    if st.button(etiket, key=f"sohbet_{s_id}"):
-                        st.session_state.aktif_sohbet_id = s_id
-                        st.session_state.mesajlar = sohbet_getir(s_id)
-                        st.rerun()
-                with c2:
-                    if st.button("🗑️", key=f"sil_{s_id}"):
-                        sohbet_sil(s_id)
-                        if s_id == st.session_state.aktif_sohbet_id:
-                            st.session_state.aktif_sohbet_id = yeni_sohbet()
-                            st.session_state.mesajlar = []
-                        st.rerun()
-        else:
-            st.caption(T["sohbet_yok"])
-        st.markdown("---")
-        st.markdown(f"## {T['ayarlar']}")
-        model = st.selectbox(T["model"], ["openai/gpt-oss-20b", "openai/gpt-oss-120b"])
-        kisi_secim = st.selectbox(T["kisilik"], T["kisilik_isimleri"])
-        kisi = T["kisilikler"][kisi_secim]
-        st.markdown("---")
-        gorsel_modu = st.toggle(T["gorsel_modu"], value=False)
-    else:
-        model = "openai/gpt-oss-20b"
-        kisi_secim = "Normal"
-        kisi = "Sen yardımcı bir asistansın."
-        gorsel_modu = False
-
-# --- SAYFA: ANALİTİK ---
-if st.session_state.sayfa == "analitik":
-    st.markdown(f"## {T['analitik']}")
-    
-    ist = istatistik_getir()
-    
-    # Üst metrikler
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f"""
-        <div class="metrik-kart">
-            <p class="metrik-sayi">{ist['toplam_sohbet']}</p>
-            <p class="metrik-baslik">{T['toplam_sohbet']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-        <div class="metrik-kart">
-            <p class="metrik-sayi">{ist['toplam_mesaj']}</p>
-            <p class="metrik-baslik">{T['toplam_mesaj']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div class="metrik-kart">
-            <p class="metrik-sayi">🏆</p>
-            <p class="metrik-baslik">{ist['en_cok_kisilik']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
+    st.markdown(f"## {T['sohbetler']}")
+    if st.button(T["yeni_sohbet"]):
+        st.session_state.aktif_sohbet_id = yeni_sohbet()
+        st.session_state.mesajlar = []
+        st.rerun()
     st.markdown("---")
     
-    # Dil dağılımı
-    if not ist["dil_df"].empty:
-        st.markdown(f"### {T['kullanilan_diller']}")
-        dil_df = ist["dil_df"].copy()
-        dil_df["dil_adi"] = dil_df["dil"].map(lambda x: CEVIRI.get(x, {}).get("dil_adi", x))
-        st.bar_chart(dil_df.set_index("dil_adi")["sayi"])
+    sohbetler = tum_sohbetler()
+    if sohbetler:
+        for s_id, s_baslik, s_tarih in sohbetler:
+            c1, c2 = st.columns([5, 1])
+            with c1:
+                etiket = f"💬 {s_baslik}"
+                if s_id == st.session_state.aktif_sohbet_id:
+                    etiket = f"✅ {s_baslik}"
+                if st.button(etiket, key=f"sohbet_{s_id}"):
+                    st.session_state.aktif_sohbet_id = s_id
+                    st.session_state.mesajlar = sohbet_getir(s_id)
+                    st.rerun()
+            with c2:
+                if st.button("🗑️", key=f"sil_{s_id}"):
+                    sohbet_sil(s_id)
+                    if s_id == st.session_state.aktif_sohbet_id:
+                        st.session_state.aktif_sohbet_id = yeni_sohbet()
+                        st.session_state.mesajlar = []
+                    st.rerun()
+    else:
+        st.caption(T["sohbet_yok"])
     
-    # Günlük kullanım
-    if not ist["gunluk_df"].empty:
-        st.markdown(f"### {T['gunluk_kullanim']}")
-        gunluk = ist["gunluk_df"].iloc[::-1]
-        st.line_chart(gunluk.set_index("tarih")["mesaj"])
-    
-    # Son aktiviteler
-    if not ist["son_df"].empty:
-        st.markdown(f"### {T['son_aktiviteler']}")
-        goster = ist["son_df"].copy()
-        goster.columns = ["Tarih", "Dil", "Kişilik", "Mesaj"]
-        st.dataframe(goster, use_container_width=True, hide_index=True)
-    
-    if ist["toplam_sohbet"] == 0:
-        st.info("Henüz veri yok. Sohbet etmeye başla!")
+    st.markdown("---")
+    st.markdown(f"## {T['ayarlar']}")
+    model = st.selectbox(T["model"], ["openai/gpt-oss-20b", "openai/gpt-oss-120b"])
+    kisi_secim = st.selectbox(T["kisilik"], T["kisilik_isimleri"])
+    kisi = T["kisilikler"][kisi_secim]
+    st.markdown("---")
+    gorsel_modu = st.toggle(T["gorsel_modu"], value=False)
 
-# --- SAYFA: SOHBET ---
-else:
-    if not st.session_state.mesajlar:
-        with st.chat_message("assistant", avatar="🔥"):
-            st.markdown(T["hosgeldin"])
+# --- HOŞGELDİN ---
+if not st.session_state.mesajlar:
+    with st.chat_message("assistant", avatar="🔥"):
+        st.markdown(T["hosgeldin"])
+
+# --- ESKİ MESAJLAR ---
+for m in st.session_state.mesajlar:
+    avatar = "👤" if m["role"] == "user" else "🔥"
+    with st.chat_message(m["role"], avatar=avatar):
+        if isinstance(m["content"], str):
+            st.markdown(m["content"])
+
+# --- GİRİŞ ---
+if soru := st.chat_input(T["sor"]):
+    st.session_state.mesajlar.append({"role": "user", "content": soru})
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(soru)
     
-    for m in st.session_state.mesajlar:
-        avatar = "👤" if m["role"] == "user" else "🔥"
-        with st.chat_message(m["role"], avatar=avatar):
-            if isinstance(m["content"], str):
-                st.markdown(m["content"])
-    
-    if soru := st.chat_input(T["sor"]):
-        st.session_state.mesajlar.append({"role": "user", "content": soru})
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(soru)
-        
-        with st.chat_message("assistant", avatar="🔥"):
-            if gorsel_modu:
-                with st.spinner(T["gorsel_olusturuluyor"]):
-                    try:
-                        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
-                        r = requests.get(url, timeout=60)
-                        if r.status_code == 200:
-                            st.image(BytesIO(r.content), caption=soru, use_container_width=True)
-                            cevap = f"🖼️ {soru}"
-                        else:
-                            st.error(T["gorsel_hata"])
-                            cevap = T["gorsel_hata"]
-                    except Exception as e:
-                        st.error(f"{T['hata']}: {e}")
-                        cevap = T["gorsel_hata"]
-                istatistik_kaydet(st.session_state.dil, kisi_secim, 1, 1)
-            else:
-                yer = st.empty()
-                tam = ""
+    with st.chat_message("assistant", avatar="🔥"):
+        if gorsel_modu:
+            with st.spinner(T["gorsel_olusturuluyor"]):
                 try:
-                    stream = client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "system", "content": kisi}]
-                                 + st.session_state.mesajlar,
-                        stream=True
-                    )
-                    for parca in stream:
-                        icerik = parca.choices[0].delta.content or ""
-                        tam += icerik
-                        yer.markdown(tam + "▌")
-                    yer.markdown(tam)
-                    cevap = tam
+                    url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
+                    r = requests.get(url, timeout=60)
+                    if r.status_code == 200:
+                        st.image(BytesIO(r.content), caption=soru, use_container_width=True)
+                        cevap = f"🖼️ {soru}"
+                    else:
+                        st.error(T["gorsel_hata"])
+                        cevap = T["gorsel_hata"]
                 except Exception as e:
-                    yer.error(f"{T['hata']}: {e}")
-                    cevap = "Hata"
-                istatistik_kaydet(st.session_state.dil, kisi_secim, 1, 0)
-        
-        st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-        sohbet_guncelle(
-            st.session_state.aktif_sohbet_id,
-            st.session_state.mesajlar,
-            st.session_state.dil,
-            kisi_secim
-        )
+                    st.error(f"{T['hata']}: {e}")
+                    cevap = T["gorsel_hata"]
+        else:
+            yer = st.empty()
+            tam = ""
+            try:
+                stream = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": kisi}]
+                             + st.session_state.mesajlar,
+                    stream=True
+                )
+                for parca in stream:
+                    icerik = parca.choices[0].delta.content or ""
+                    tam += icerik
+                    yer.markdown(tam + "▌")
+                yer.markdown(tam)
+                cevap = tam
+            except Exception as e:
+                yer.error(f"{T['hata']}: {e}")
+                cevap = "Hata"
+    
+    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
