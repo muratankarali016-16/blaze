@@ -149,38 +149,114 @@ CEVIRI = {
     }
 }
 
-# --- ÖZEL CSS ---
+
+   # --- ÖZEL CSS (CHATGPT TARZI) ---
 st.markdown("""
 <style>
+    .stApp {
+        background: #212121;
+    }
     .ana-baslik {
         text-align: center;
-        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 50%, #ffcc00 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5em; font-weight: bold; margin-bottom: 0;
+        color: #ffffff;
+        font-size: 2.5em;
+        font-weight: 600;
+        margin-bottom: 0;
     }
-    .alt-baslik { text-align: center; color: #888; margin-bottom: 30px; }
-    .stChatMessage { border-radius: 15px; padding: 12px 16px; margin-bottom: 10px; }
-    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #1a1a1a 0%, #2a1a0a 100%); }
-    section[data-testid="stSidebar"] * { color: #e0e0e0 !important; }
+    .alt-baslik {
+        text-align: center;
+        color: #8e8ea0;
+        margin-top: 0;
+        margin-bottom: 30px;
+        font-size: 0.95em;
+    }
+    .stChatMessage {
+        background: #2f2f2f;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+        border: 1px solid #3f3f3f;
+    }
+    [data-testid="stChatMessageContent"] {
+        color: #ececec;
+    }
+    .stChatInput textarea {
+        background: #2f2f2f !important;
+        color: #ececec !important;
+        border: 1px solid #4f4f4f !important;
+        border-radius: 12px !important;
+    }
+    .stChatInput textarea::placeholder {
+        color: #8e8ea0 !important;
+    }
+    section[data-testid="stSidebar"] {
+        background: #171717;
+        border-right: 1px solid #2f2f2f;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #ececec !important;
+    }
     .stButton button {
-        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
-        color: white; border: none; border-radius: 20px;
-        font-weight: bold; width: 100%;
+        background: #2f2f2f;
+        color: #ececec;
+        border: 1px solid #4f4f4f;
+        border-radius: 10px;
+        font-weight: 500;
+        width: 100%;
+        transition: 0.2s;
+    }
+    .stButton button:hover {
+        background: #3f3f3f;
+        border-color: #10a37f;
     }
     .stDownloadButton button {
-        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
-        color: white; border: none; border-radius: 15px;
-        font-size: 0.85em; padding: 5px 10px;
+        background: #10a37f;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.85em;
+        padding: 6px 12px;
+        font-weight: 500;
+    }
+    .stDownloadButton button:hover {
+        background: #0d8a6a;
     }
     .kullanici-bilgi {
         text-align: center;
-        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
+        background: #10a37f;
         color: white;
         padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 0.85em;
+        border-radius: 10px;
+        font-size: 0.8em;
         margin-bottom: 10px;
+        font-weight: 500;
+    }
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stTextInput input {
+        background: #2f2f2f !important;
+        color: #ececec !important;
+        border-color: #4f4f4f !important;
+        border-radius: 10px !important;
+    }
+    .stSlider {
+        color: #10a37f;
+    }
+    .stMarkdown h2, .stMarkdown h3 {
+        color: #ececec !important;
+    }
+    .stMarkdown, .stCaption, p, span, label {
+        color: #ececec;
+    }
+    code {
+        background: #2f2f2f !important;
+        color: #10a37f !important;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
     }
 </style>
 """, unsafe_allow_html=True)
