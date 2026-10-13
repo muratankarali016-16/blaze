@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import requests
 from io import BytesIO
+import uuid
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="BlazeGPT", page_icon="🔥", layout="centered")
@@ -19,7 +20,7 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Kişilik",
         "gorsel_modu": "🎨 Görsel Oluşturma",
         "gorsel_olusturuluyor": "🎨 Görsel oluşturuluyor...",
-        "hosgeldin": "### Merhaba! Ben BlazeGPT 🔥\n\n- 💬 Sohbet edebilirsin\n- 🎨 Görsel modunu açıp görsel oluşturabilirsin\n- 💾 Sohbetlerin **otomatik kaydedilir**\n\n**Hadi başlayalım!** ⬇️",
+        "hosgeldin": "### Merhaba! Ben BlazeGPT 🔥\n\n- 💬 Sohbet edebilirsin\n- 🎨 Görsel modunu açıp görsel oluşturabilirsin\n- 💾 Sohbetlerin **otomatik kaydedilir** ve **sadece sana özeldir** 🔒\n\n**Hadi başlayalım!** ⬇️",
         "sor": "Bir şey sor...",
         "kisilikler": {
             "Normal Asistan": "Sen yardımcı, nazik ve zeki bir asistansın. Türkçe cevap ver.",
@@ -46,7 +47,7 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Personality",
         "gorsel_modu": "🎨 Image Generation",
         "gorsel_olusturuluyor": "🎨 Generating image...",
-        "hosgeldin": "### Hello! I'm BlazeGPT 🔥\n\n- 💬 You can chat\n- 🎨 Turn on image mode\n- 💾 Your chats are **auto-saved**\n\n**Let's start!** ⬇️",
+        "hosgeldin": "### Hello! I'm BlazeGPT 🔥\n\n- 💬 You can chat\n- 🎨 Turn on image mode\n- 💾 Your chats are **auto-saved** and **only for you** 🔒\n\n**Let's start!** ⬇️",
         "sor": "Ask something...",
         "kisilikler": {
             "Normal Assistant": "You are a helpful, kind, and smart assistant. Answer in English.",
@@ -73,7 +74,7 @@ CEVIRI = {
         "model": "🧠 Modell", "kisilik": "🎭 Persönlichkeit",
         "gorsel_modu": "🎨 Bildgenerierung",
         "gorsel_olusturuluyor": "🎨 Bild wird generiert...",
-        "hosgeldin": "### Hallo! Ich bin BlazeGPT 🔥\n\n- 💬 Du kannst chatten\n- 🎨 Aktiviere den Bildmodus\n- 💾 Deine Chats werden **automatisch gespeichert**\n\n**Los geht's!** ⬇️",
+        "hosgeldin": "### Hallo! Ich bin BlazeGPT 🔥\n\n- 💬 Du kannst chatten\n- 🎨 Aktiviere den Bildmodus\n- 💾 Deine Chats werden **automatisch gespeichert** und sind **nur für dich** 🔒\n\n**Los geht's!** ⬇️",
         "sor": "Frag etwas...",
         "kisilikler": {
             "Normaler Assistent": "Du bist ein hilfsbereiter, freundlicher und kluger Assistent. Antworte auf Deutsch.",
@@ -100,7 +101,7 @@ CEVIRI = {
         "model": "🧠 Modèle", "kisilik": "🎭 Personnalité",
         "gorsel_modu": "🎨 Génération d'images",
         "gorsel_olusturuluyor": "🎨 Génération de l'image...",
-        "hosgeldin": "### Bonjour ! Je suis BlazeGPT 🔥\n\n- 💬 Tu peux discuter\n- 🎨 Active le mode image\n- 💾 Tes discussions sont **auto-sauvegardées**\n\n**Commençons !** ⬇️",
+        "hosgeldin": "### Bonjour ! Je suis BlazeGPT 🔥\n\n- 💬 Tu peux discuter\n- 🎨 Active le mode image\n- 💾 Tes discussions sont **auto-sauvegardées** et **rien que pour toi** 🔒\n\n**Commençons !** ⬇️",
         "sor": "Pose une question...",
         "kisilikler": {
             "Assistant Normal": "Tu es un assistant utile, gentil et intelligent. Réponds en français.",
@@ -127,7 +128,7 @@ CEVIRI = {
         "model": "🧠 Modelo", "kisilik": "🎭 Personalidad",
         "gorsel_modu": "🎨 Generación de imágenes",
         "gorsel_olusturuluyor": "🎨 Generando imagen...",
-        "hosgeldin": "### ¡Hola! Soy BlazeGPT 🔥\n\n- 💬 Puedes chatear\n- 🎨 Activa el modo imagen\n- 💾 Tus chats se **guardan automáticamente**\n\n**¡Empecemos!** ⬇️",
+        "hosgeldin": "### ¡Hola! Soy BlazeGPT 🔥\n\n- 💬 Puedes chatear\n- 🎨 Activa el modo imagen\n- 💾 Tus chats se **guardan automáticamente** y son **solo para ti** 🔒\n\n**¡Empecemos!** ⬇️",
         "sor": "Pregunta algo...",
         "kisilikler": {
             "Asistente Normal": "Eres un asistente útil, amable e inteligente. Responde en español.",
@@ -172,11 +173,25 @@ st.markdown("""
         color: white; border: none; border-radius: 15px;
         font-size: 0.85em; padding: 5px 10px;
     }
+    .kullanici-bilgi {
+        text-align: center;
+        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- API ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+# --- KULLANICI OTURUM ID (Benzersiz) ---
+if "kullanici_id" not in st.session_state:
+    st.session_state.kullanici_id = str(uuid.uuid4())[:8]
+    # Kısa ve benzersiz bir ID (ör: "a3f9b2c1")
 
 # --- DİL ---
 if "dil" not in st.session_state:
@@ -192,9 +207,15 @@ def db_olustur():
     c.execute("""
         CREATE TABLE IF NOT EXISTS sohbetler (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kullanici_id TEXT,
             baslik TEXT, olusturma TEXT, guncelleme TEXT, mesajlar TEXT
         )
     """)
+    # Eski tabloyu kontrol et ve kullanici_id kolonu ekle (yoksa)
+    try:
+        c.execute("ALTER TABLE sohbetler ADD COLUMN kullanici_id TEXT")
+    except sqlite3.OperationalError:
+        pass  # Zaten var
     conn.commit()
     conn.close()
 
@@ -205,8 +226,8 @@ def yeni_sohbet(baslik="Yeni Sohbet"):
     c = conn.cursor()
     simdi = datetime.now().isoformat()
     c.execute(
-        "INSERT INTO sohbetler (baslik, olusturma, guncelleme, mesajlar) VALUES (?, ?, ?, ?)",
-        (baslik, simdi, simdi, "[]")
+        "INSERT INTO sohbetler (kullanici_id, baslik, olusturma, guncelleme, mesajlar) VALUES (?, ?, ?, ?, ?)",
+        (st.session_state.kullanici_id, baslik, simdi, simdi, "[]")
     )
     sid = c.lastrowid
     conn.commit()
@@ -216,7 +237,11 @@ def yeni_sohbet(baslik="Yeni Sohbet"):
 def sohbet_getir(sid):
     conn = db_baglantisi()
     c = conn.cursor()
-    c.execute("SELECT mesajlar FROM sohbetler WHERE id = ?", (sid,))
+    # SADECE kendi sohbetini getir
+    c.execute(
+        "SELECT mesajlar FROM sohbetler WHERE id = ? AND kullanici_id = ?",
+        (sid, st.session_state.kullanici_id)
+    )
     r = c.fetchone()
     conn.close()
     return json.loads(r[0]) if r else []
@@ -230,9 +255,10 @@ def sohbet_guncelle(sid, mesajlar):
         if m["role"] == "user" and isinstance(m["content"], str):
             baslik = m["content"][:40] + ("..." if len(m["content"]) > 40 else "")
             break
+    # SADECE kendi sohbetini güncelle
     c.execute(
-        "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ?",
-        (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid)
+        "UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ? AND kullanici_id = ?",
+        (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid, st.session_state.kullanici_id)
     )
     conn.commit()
     conn.close()
@@ -240,7 +266,11 @@ def sohbet_guncelle(sid, mesajlar):
 def tum_sohbetler():
     conn = db_baglantisi()
     c = conn.cursor()
-    c.execute("SELECT id, baslik, guncelleme FROM sohbetler ORDER BY guncelleme DESC")
+    # SADECE kendi sohbetlerini getir
+    c.execute(
+        "SELECT id, baslik, guncelleme FROM sohbetler WHERE kullanici_id = ? ORDER BY guncelleme DESC",
+        (st.session_state.kullanici_id,)
+    )
     r = c.fetchall()
     conn.close()
     return r
@@ -248,7 +278,11 @@ def tum_sohbetler():
 def sohbet_sil(sid):
     conn = db_baglantisi()
     c = conn.cursor()
-    c.execute("DELETE FROM sohbetler WHERE id = ?", (sid,))
+    # SADECE kendi sohbetini sil
+    c.execute(
+        "DELETE FROM sohbetler WHERE id = ? AND kullanici_id = ?",
+        (sid, st.session_state.kullanici_id)
+    )
     conn.commit()
     conn.close()
 
@@ -282,6 +316,12 @@ st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=Tr
 
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
+    # KULLANICI BİLGİSİ
+    st.markdown(
+        f'<div class="kullanici-bilgi">🔒 Oturum: {st.session_state.kullanici_id}</div>',
+        unsafe_allow_html=True
+    )
+    
     st.markdown("## 🌐 Dil / Language")
     secili_dil = st.selectbox(
         "Dil", options=list(CEVIRI.keys()),
