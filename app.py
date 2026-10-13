@@ -149,114 +149,176 @@ CEVIRI = {
     }
 }
 
-
-   # --- ÖZEL CSS (CHATGPT TARZI) ---
+# --- ÖZEL CSS (DEEPSEEK TEMASI) ---
 st.markdown("""
 <style>
     .stApp {
-        background: #212121;
+        background: #1e1e2e;
     }
     .ana-baslik {
         text-align: center;
-        color: #ffffff;
-        font-size: 2.5em;
-        font-weight: 600;
+        color: #4d6bfe;
+        font-size: 2.8em;
+        font-weight: 700;
+        letter-spacing: -0.5px;
         margin-bottom: 0;
     }
     .alt-baslik {
         text-align: center;
-        color: #8e8ea0;
+        color: #7a7a8e;
         margin-top: 0;
         margin-bottom: 30px;
         font-size: 0.95em;
     }
     .stChatMessage {
-        background: #2f2f2f;
+        background: #262637;
         border-radius: 12px;
         padding: 14px 18px;
         margin-bottom: 12px;
-        border: 1px solid #3f3f3f;
+        border: 1px solid #313145;
     }
     [data-testid="stChatMessageContent"] {
-        color: #ececec;
+        color: #e0e0e0;
+        line-height: 1.6;
     }
     .stChatInput textarea {
-        background: #2f2f2f !important;
-        color: #ececec !important;
-        border: 1px solid #4f4f4f !important;
+        background: #262637 !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #313145 !important;
         border-radius: 12px !important;
+        font-size: 1em !important;
+    }
+    .stChatInput textarea:focus {
+        border-color: #4d6bfe !important;
+        box-shadow: 0 0 0 3px rgba(77, 107, 254, 0.15) !important;
     }
     .stChatInput textarea::placeholder {
-        color: #8e8ea0 !important;
+        color: #7a7a8e !important;
     }
     section[data-testid="stSidebar"] {
-        background: #171717;
-        border-right: 1px solid #2f2f2f;
+        background: #181825;
+        border-right: 1px solid #262637;
     }
     section[data-testid="stSidebar"] * {
-        color: #ececec !important;
+        color: #d0d0dc !important;
+    }
+    section[data-testid="stSidebar"] h2 {
+        color: #4d6bfe !important;
+        font-weight: 600;
     }
     .stButton button {
-        background: #2f2f2f;
-        color: #ececec;
-        border: 1px solid #4f4f4f;
+        background: #262637;
+        color: #e0e0e0;
+        border: 1px solid #313145;
         border-radius: 10px;
         font-weight: 500;
         width: 100%;
-        transition: 0.2s;
+        padding: 10px;
+        transition: all 0.2s;
     }
     .stButton button:hover {
-        background: #3f3f3f;
-        border-color: #10a37f;
+        background: #313145;
+        border-color: #4d6bfe;
+        color: #ffffff;
+        transform: translateY(-1px);
     }
     .stDownloadButton button {
-        background: #10a37f;
+        background: #4d6bfe;
         color: white;
         border: none;
         border-radius: 10px;
         font-size: 0.85em;
         padding: 6px 12px;
-        font-weight: 500;
+        font-weight: 600;
     }
     .stDownloadButton button:hover {
-        background: #0d8a6a;
+        background: #3a56e0;
+        transform: scale(1.02);
     }
     .kullanici-bilgi {
         text-align: center;
-        background: #10a37f;
+        background: linear-gradient(90deg, #4d6bfe 0%, #7a8fff 100%);
         color: white;
         padding: 8px 16px;
         border-radius: 10px;
         font-size: 0.8em;
-        margin-bottom: 10px;
-        font-weight: 500;
+        margin-bottom: 12px;
+        font-weight: 600;
     }
     .stSelectbox div[data-baseweb="select"] > div,
     .stTextInput input {
-        background: #2f2f2f !important;
-        color: #ececec !important;
-        border-color: #4f4f4f !important;
+        background: #262637 !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #313145 !important;
         border-radius: 10px !important;
     }
-    .stSlider {
-        color: #10a37f;
+    .stSelectbox div[data-baseweb="select"] > div:hover {
+        border-color: #4d6bfe !important;
     }
-    .stMarkdown h2, .stMarkdown h3 {
-        color: #ececec !important;
+    .stSlider [data-baseweb="slider"] {
+        background: #4d6bfe !important;
+    }
+    .stMarkdown h2 {
+        color: #4d6bfe !important;
+        font-weight: 600;
+    }
+    .stMarkdown h3 {
+        color: #7a8fff !important;
+        font-weight: 600;
     }
     .stMarkdown, .stCaption, p, span, label {
-        color: #ececec;
+        color: #d0d0dc;
     }
     code {
-        background: #2f2f2f !important;
-        color: #10a37f !important;
+        background: #181825 !important;
+        color: #7a8fff !important;
         padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid #313145;
+    }
+    pre {
+        background: #181825 !important;
+        border: 1px solid #313145 !important;
+        border-radius: 10px !important;
+    }
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #181825;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #4d6bfe;
         border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #7a8fff;
     }
     img {
         display: block;
         margin-left: auto;
         margin-right: auto;
+        filter: drop-shadow(0 0 15px rgba(77, 107, 254, 0.3));
+    }
+    .stAlert {
+        background: #262637 !important;
+        border-radius: 10px !important;
+        border-left: 4px solid #4d6bfe !important;
+        color: #e0e0e0 !important;
+    }
+    .stToggle {
+        color: #e0e0e0 !important;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        background: #262637;
+        border-radius: 10px;
+        padding: 4px;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #4d6bfe !important;
+        color: white !important;
+        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
