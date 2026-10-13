@@ -22,7 +22,7 @@ st.markdown("""
 # Logo ve başlık yan yana
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    st.image("logo.png", width=120)
+    ("logo.png", width=120)
 st.markdown('<h1 class="ana-baslik">BlazeGPT</h1>', unsafe_allow_html=True)
 st.markdown('<p class="alt-baslik">Groq + Pollinations ile görsel zekası ⚡</p>', unsafe_allow_html=True)
 
