@@ -436,4 +436,4 @@ if soru := st.chat_input(T["sor"]):
                 cevap = "Hata"
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)0
+    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
