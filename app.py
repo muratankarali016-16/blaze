@@ -7,8 +7,11 @@ import requests
 from io import BytesIO
 import uuid
 
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="BlazeGPT", page_icon="🔥", layout="centered")
+st.set_page_config(
+    page_title="BlazeGPT - Ücretsiz Yapay Zeka",
+    page_icon="🔥",
+    layout="centered"
+)
 
 # --- ÇEVİRİ ---
 CEVIRI = {
@@ -20,24 +23,59 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Kişilik",
         "gorsel_modu": "🎨 Görsel Oluşturma",
         "gorsel_olusturuluyor": "🎨 Görsel oluşturuluyor...",
-        "hosgeldin": "Merhaba! Ben **BlazeGPT** 🔥 Sohbet edebilir, görsel oluşturabilirsin. Sohbetlerin otomatik kaydedilir ve sadece sana özeldir 🔒",
+        "hosgeldin": "Merhaba! Ben BlazeGPT 🔥 Sohbet edebilir, görsel oluşturabilir, sorularını cevaplayabilirim. Hadi başlayalım!",
         "sor": "Bir şey sor...",
         "kisilikler": {
-            "Normal Asistan": "Sen yardımcı, nazik ve zeki bir asistansın. Türkçe cevap ver.",
-            "Öğretmen": "Sen sabırlı bir öğretmensin. Basit örneklerle anlatırsın. Türkçe cevap ver.",
-            "Şair": "Sen duygusal bir şairsin. Şiirsel bir dille yazarsın. Türkçe cevap ver.",
-            "Kod Yazıcı": "Sen uzman bir yazılımcısın. Temiz, yorumlu kod yazarsın. Türkçe açıkla.",
-            "Komedyen": "Sen esprili bir komedyensin. Mizah katarsın. Türkçe cevap ver."
+            "Samimi Arkadaş": """Sen BlazeGPT adında samimi, esprili ve yardımcı bir yapay zeka asistanısın. 
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Samimi ve sıcak bir dil kullan, arkadaş gibi konuş.
+- Bilmediğin konularda "bilmiyorum" demek yerine, elindeki bilgilerle MANTIKLI TAHMİNLER yürüt ve "tahminimce" diye belirt.
+- Spor, siyaset, güncel olaylar gibi konularda yorum yapabilirsin ama "kesin bilgi" verme, olasılıklardan bahset.
+- Kısa ve öz cevap ver, gereksiz uzatma.
+- Emoji kullanabilirsin ama abartma.
+- Kullanıcıya "sen" diye hitap et.
+- Espri yapabilirsin, ama saygılı ol.""",
+            "Profesyonel": """Sen BlazeGPT adında profesyonel bir yapay zeka asistanısın.
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Ciddi, net ve profesyonel bir dil kullan.
+- Bilmediğin konularda tahmin yürütme, "bu konuda kesin bilgim yok" de.
+- Kısa ve öz cevap ver.
+- Kullanıcıya "siz" diye hitap et.""",
+            "Öğretmen": """Sen sabırlı ve öğretici bir öğretmensin.
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Konuları basit örneklerle, adım adım anlat.
+- Karmaşık şeyleri günlük hayattan örneklerle açıkla.
+- Kullanıcıyı cesaretlendir, "harika soru!" gibi şeyler söyle.""",
+            "Şair": """Sen duygusal ve yaratıcı bir şairsin.
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Cevaplarını şiirsel, edebi bir dille yaz.
+- Duygulara hitap et.
+- Metaforlar ve benzetmeler kullan.""",
+            "Kod Ustası": """Sen uzman bir yazılımcısın.
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Kod sorularına temiz, yorumlu ve çalışan kodlarla cevap ver.
+- Kodun nasıl çalıştığını açıkla.
+- En iyi pratikleri öner.""",
+            "Komedyen": """Sen esprili bir komedyensin.
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Cevaplarına mizah kat, espriler yap.
+- Ama bilgiyi doğru ver.
+- Kullanıcıyı güldürmeye çalış."""
         },
-        "kisilik_isimleri": ["Normal Asistan", "Öğretmen", "Şair", "Kod Yazıcı", "Komedyen"],
+        "kisilik_isimleri": ["Samimi Arkadaş", "Profesyonel", "Öğretmen", "Şair", "Kod Ustası", "Komedyen"],
         "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
         "gorsel_ayarlari": "🖼️ Görsel Ayarları",
         "gorsel_sayisi": "Görsel Sayısı", "gorsel_boyut": "Boyut",
-        "kare": "⬛ Kare (1024x1024)", "yatay": "▬ Yatay (1280x720)", "dikey": "▮ Dikey (720x1280)",
+        "kare": "⬛ Kare", "yatay": "▬ Yatay", "dikey": "▮ Dikey",
         "indir": "💾 İndir", "tema": "🎨 Tema", "galeri": "🖼️ Galeri",
         "galeri_bos": "Henüz kaydedilmiş görsel yok",
-        "kopyala": "📋 Kopyala", "kopyalandi": "✅ Kopyalandı",
-        "kopyalanacak": "📋 Kopyalanacak Metin", "kapat": "❌ Kapat"
+        "kopyala": "📋", "kopyalanacak": "📋 Kopyalanacak Metin", "kapat": "❌ Kapat"
     },
     "en": {
         "dil_adi": "🇬🇧 English", "baslik": "BlazeGPT",
@@ -47,28 +85,59 @@ CEVIRI = {
         "model": "🧠 Model", "kisilik": "🎭 Personality",
         "gorsel_modu": "🎨 Image Generation",
         "gorsel_olusturuluyor": "🎨 Generating image...",
-        "hosgeldin": "Hello! I'm **BlazeGPT** 🔥 You can chat and generate images. Chats are auto-saved and private 🔒",
+        "hosgeldin": "Hello! I'm BlazeGPT 🔥 I can chat, generate images, and answer your questions. Let's start!",
         "sor": "Ask something...",
         "kisilikler": {
-            "Normal Assistant": "You are a helpful, kind, and smart assistant. Answer in English.",
-            "Teacher": "You are a patient teacher. Explain with simple examples. Answer in English.",
-            "Poet": "You are an emotional poet. Write poetically. Answer in English.",
-            "Coder": "You are an expert programmer. Write clean, commented code. Explain in English.",
-            "Comedian": "You are a funny comedian. Add humor. Answer in English."
+            "Friendly": """You are BlazeGPT, a friendly, witty, and helpful AI assistant.
+Rules:
+- Always answer in English.
+- Use a warm, friendly tone.
+- For unknown topics, make LOGICAL GUESSES and say "my guess is".
+- Be concise.
+- Use emojis but don't overdo it.""",
+            "Professional": """You are BlazeGPT, a professional AI assistant.
+Rules:
+- Always answer in English.
+- Use serious, clear, professional language.
+- Be concise.""",
+            "Teacher": """You are a patient, teaching AI.
+Rules:
+- Always answer in English.
+- Explain with simple examples.""",
+            "Poet": """You are an emotional poet.
+Rules:
+- Always answer in English.
+- Write poetically.""",
+            "Coder": """You are an expert programmer.
+Rules:
+- Always answer in English.
+- Provide clean, commented code.""",
+            "Comedian": """You are a funny comedian.
+Rules:
+- Always answer in English.
+- Add humor."""
         },
-        "kisilik_isimleri": ["Normal Assistant", "Teacher", "Poet", "Coder", "Comedian"],
+        "kisilik_isimleri": ["Friendly", "Professional", "Teacher", "Poet", "Coder", "Comedian"],
         "hata": "⚠️ Error", "gorsel_hata": "Could not generate image.",
         "gorsel_ayarlari": "🖼️ Image Settings",
         "gorsel_sayisi": "Number of Images", "gorsel_boyut": "Size",
-        "kare": "⬛ Square (1024x1024)", "yatay": "▬ Landscape (1280x720)", "dikey": "▮ Portrait (720x1280)",
+        "kare": "⬛ Square", "yatay": "▬ Landscape", "dikey": "▮ Portrait",
         "indir": "💾 Download", "tema": "🎨 Theme", "galeri": "🖼️ Gallery",
         "galeri_bos": "No saved images yet",
-        "kopyala": "📋 Copy", "kopyalandi": "✅ Copied",
-        "kopyalanacak": "📋 Text to Copy", "kapat": "❌ Close"
+        "kopyala": "📋", "kopyalanacak": "📋 Text to Copy", "kapat": "❌ Close"
     }
 }
 
-# --- TEMALAR ---
+# --- MODELLER (güncel ve zeki) ---
+MODELLER = [
+    "llama-3.3-70b-versatile",      # En zeki, güncel
+    "llama-3.1-8b-instant",          # Hızlı
+    "openai/gpt-oss-120b",           # Büyük model
+    "openai/gpt-oss-20b",            # Küçük model
+    "qwen/qwen3-32b",                # Alternatif
+    "gemma2-9b-it"                   # Google modeli
+]
+
 TEMALAR = {
     "deepseek": {"ad": "🔵 DeepSeek", "arka": "#1e1e2e", "kenar": "#181825", "balon": "#262637", "vurgu": "#4d6bfe", "metin": "#e0e0e0", "kullanici_balon": "#005c4b"},
     "chatgpt": {"ad": "🟢 ChatGPT", "arka": "#212121", "kenar": "#171717", "balon": "#2f2f2f", "vurgu": "#10a37f", "metin": "#ececec", "kullanici_balon": "#0d5c4f"},
@@ -77,7 +146,6 @@ TEMALAR = {
     "mor": {"ad": "🟣 Mor", "arka": "#1a0f2e", "kenar": "#100820", "balon": "#2a1a45", "vurgu": "#a855f7", "metin": "#e8e0f0", "kullanici_balon": "#6b21a8"}
 }
 
-# --- SESSION ---
 if "kullanici_id" not in st.session_state:
     st.session_state.kullanici_id = str(uuid.uuid4())[:8]
 if "dil" not in st.session_state:
@@ -87,7 +155,6 @@ if "tema" not in st.session_state:
 if "kopyalanacak" not in st.session_state:
     st.session_state.kopyalanacak = ""
 
-# --- VERİTABANI ---
 def db_baglantisi():
     return sqlite3.connect("blazegpt.db", check_same_thread=False)
 
@@ -200,7 +267,6 @@ def tema_uygula(tema_adi):
         .zaman {{ font-size: 0.65em; color: #a0a0a0; margin-top: 2px; text-align: right; display: block; line-height: 1; }}
         .balon.bot .zaman {{ text-align: left; }}
         .stChatInput textarea {{ background: {t['balon']} !important; color: {t['metin']} !important; border: 1px solid {t['vurgu']} !important; border-radius: 12px !important; }}
-        .stChatInput textarea:focus {{ border-color: {t['vurgu']} !important; }}
         section[data-testid="stSidebar"] {{ background: {t['kenar']}; border-right: 1px solid {t['balon']}; }}
         section[data-testid="stSidebar"] * {{ color: {t['metin']} !important; }}
         section[data-testid="stSidebar"] h2 {{ color: {t['vurgu']} !important; }}
@@ -220,28 +286,22 @@ def tema_uygula(tema_adi):
     </style>
     """, unsafe_allow_html=True)
 
-# --- API ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- SESSION DEVAM ---
 if "aktif_sohbet_id" not in st.session_state:
     st.session_state.aktif_sohbet_id = yeni_sohbet()
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = sohbet_getir(st.session_state.aktif_sohbet_id)
 
 T = CEVIRI[st.session_state.dil]
-
-# --- TEMA ---
 tema_uygula(st.session_state.tema)
 
-# --- BAŞLIK ---
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image("logo.png", width=100)
 st.markdown(f'<h1 class="ana-baslik">{T["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=True)
 
-# --- KENAR ÇUBUĞU ---
 with st.sidebar:
     st.markdown(f'<div class="kullanici-bilgi">🔒 Oturum: {st.session_state.kullanici_id}</div>', unsafe_allow_html=True)
     
@@ -290,7 +350,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown(f"## {T['ayarlar']}")
-    model = st.selectbox(T["model"], ["openai/gpt-oss-20b", "openai/gpt-oss-120b"])
+    model = st.selectbox(T["model"], MODELLER, index=0)
     kisi_secim = st.selectbox(T["kisilik"], T["kisilik_isimleri"])
     kisi = T["kisilikler"][kisi_secim]
     
@@ -308,7 +368,6 @@ with st.sidebar:
         else:
             genislik, yukseklik = 720, 1280
 
-# --- KOPYALAMA ALANI ---
 if st.session_state.kopyalanacak:
     st.markdown(f"### {T['kopyalanacak']}")
     st.code(st.session_state.kopyalanacak, language=None)
@@ -317,7 +376,6 @@ if st.session_state.kopyalanacak:
         st.rerun()
     st.markdown("---")
 
-# --- SEKMELER ---
 tab1, tab2 = st.tabs(["💬 Sohbet", T["galeri"]])
 
 with tab1:
@@ -331,13 +389,10 @@ with tab1:
             zaman = datetime.now().strftime("%H:%M")
             
             if m["role"] == "user":
-                html = f'<div class="sohbet-alani"><div class="mesaj-satir sag"><div class="balon kullanici">{icerik_html}<span class="zaman">{zaman} ✓✓</span></div></div></div>'
-                st.markdown(html, unsafe_allow_html=True)
+                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sag"><div class="balon kullanici">{icerik_html}<span class="zaman">{zaman} ✓✓</span></div></div></div>', unsafe_allow_html=True)
             else:
-                html = f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{icerik_html}<span class="zaman">{zaman}</span></div></div></div>'
-                st.markdown(html, unsafe_allow_html=True)
+                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{icerik_html}<span class="zaman">{zaman}</span></div></div></div>', unsafe_allow_html=True)
             
-            # Her mesajın altına kopyalama butonu
             c1, c2, c3 = st.columns([1, 1, 8])
             with c1:
                 if st.button("📋", key=f"kopya_{i}", help=T["kopyala"]):
@@ -383,7 +438,9 @@ with tab1:
                 stream = client.chat.completions.create(
                     model=model,
                     messages=[{"role": "system", "content": kisi}] + st.session_state.mesajlar,
-                    stream=True
+                    stream=True,
+                    temperature=0.8,
+                    max_tokens=2048
                 )
                 for parca in stream:
                     icerik = parca.choices[0].delta.content or ""
