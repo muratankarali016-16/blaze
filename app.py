@@ -467,13 +467,12 @@ with tab2:
 st.markdown("### 📜 Aydınlatma Metni")
 st.caption("""
 **Veri Sorumlusu:** BlazeGPT (Kişisel Kullanım)  
-**İletişim:** [muratankarali016@gmail.com]
-
+**İletişim:** []
 Bu uygulama, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında aşağıdaki şekilde aydınlatma yapmaktadır:
 
 **1. İşlenen Kişisel Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
 **2. İşleme Amaçları:** Yapay zeka hizmetinin sunulması, sohbetlerinizin kaydedilmesi ve size özel deneyim sağlanması.
 **3. Aktarım:** Hizmetin sağlanabilmesi için sohbet içerikleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır. Bu aktarım KVKK'nın 9. maddesi kapsamında yurt dışına aktarım niteliğindedir.
 **4. Hukuki Sebep:** KVKK'nın 5. maddesi uyarınca "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması" ve "meşru menfaat" hukuki sebeplerine dayanmaktadır.
-**5. Haklarınız:** KVKK'nın 11. maddesi kapsamında verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini talep etme haklarına sahipsiniz. Başvuru için [muratankarali016@gmail.com].
+**5. Haklarınız:** KVKK'nın 11. maddesi kapsamında verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini talep etme haklarına sahipsiniz. Başvuru için [].
 """)
