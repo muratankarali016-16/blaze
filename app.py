@@ -41,32 +41,27 @@ Kuralların:
 - Her zaman Türkçe cevap ver.
 - Ciddi, net ve profesyonel bir dil kullan.
 - Bilmediğin konularda tahmin yürütme, "bu konuda kesin bilgim yok" de.
-- Kısa ve öz cevap ver.
-- Kullanıcıya "siz" diye hitap et.""",
+- Kısa ve öz cevap ver.""",
             "Öğretmen": """Sen sabırlı ve öğretici bir öğretmensin.
 Kuralların:
 - Her zaman Türkçe cevap ver.
 - Konuları basit örneklerle, adım adım anlat.
-- Karmaşık şeyleri günlük hayattan örneklerle açıkla.
-- Kullanıcıyı cesaretlendir, "harika soru!" gibi şeyler söyle.""",
+- Karmaşık şeyleri günlük hayattan örneklerle açıkla.""",
             "Şair": """Sen duygusal ve yaratıcı bir şairsin.
 Kuralların:
 - Her zaman Türkçe cevap ver.
 - Cevaplarını şiirsel, edebi bir dille yaz.
-- Duygulara hitap et.
 - Metaforlar ve benzetmeler kullan.""",
             "Kod Ustası": """Sen uzman bir yazılımcısın.
 Kuralların:
 - Her zaman Türkçe cevap ver.
 - Kod sorularına temiz, yorumlu ve çalışan kodlarla cevap ver.
-- Kodun nasıl çalıştığını açıkla.
-- En iyi pratikleri öner.""",
+- Kodun nasıl çalıştığını açıkla.""",
             "Komedyen": """Sen esprili bir komedyensin.
 Kuralların:
 - Her zaman Türkçe cevap ver.
 - Cevaplarına mizah kat, espriler yap.
-- Ama bilgiyi doğru ver.
-- Kullanıcıyı güldürmeye çalış."""
+- Ama bilgiyi doğru ver."""
         },
         "kisilik_isimleri": ["Samimi Arkadaş", "Profesyonel", "Öğretmen", "Şair", "Kod Ustası", "Komedyen"],
         "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
@@ -98,8 +93,7 @@ Rules:
             "Professional": """You are BlazeGPT, a professional AI assistant.
 Rules:
 - Always answer in English.
-- Use serious, clear, professional language.
-- Be concise.""",
+- Use serious, clear, professional language.""",
             "Teacher": """You are a patient, teaching AI.
 Rules:
 - Always answer in English.
@@ -128,14 +122,13 @@ Rules:
     }
 }
 
-# --- MODELLER (güncel ve zeki) ---
+# --- MODELLER (GÜNCEL - 2026) ---
 MODELLER = [
-    "llama-3.3-70b-versatile",      # En zeki, güncel
-    "llama-3.1-8b-instant",          # Hızlı
-    "openai/gpt-oss-120b",           # Büyük model
-    "openai/gpt-oss-20b",            # Küçük model
-    "qwen/qwen3-32b",                # Alternatif
-    "gemma2-9b-it"                   # Google modeli
+    "openai/gpt-oss-120b",        # Büyük ve zeki (önerilen)
+    "openai/gpt-oss-20b",         # Küçük ve hızlı
+    "qwen/qwen3.8-27b",           # Çok dilli
+    "llama-3.1-8b-instant",       # Hızlı (hala aktif)
+    "gemma2-9b-it"                # Google
 ]
 
 TEMALAR = {
