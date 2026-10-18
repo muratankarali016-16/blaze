@@ -32,10 +32,15 @@ CEVIRI = {
         "aydinlatma": "📜 Gizlilik ve Aydınlatma",
         "aydinlatma_metni": """
         **Veri Sorumlusu:** BlazeGPT (Kişisel Kullanım)
-        Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir.
+        
+        Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir. 
         - **İşlenen Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
         - **Aktarım:** Hizmet için sohbet içerikleri Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
         - **Haklarınız:** Verilerinizin silinmesini talep etme hakkına sahipsiniz.
+        
+        ⚠️ **GÜVENLİK UYARISI:** Lütfen bu sisteme **özel bilgilerinizi, ileri düzey kurumsal bilgilerinizi ve kişisel bilgilerinizi (TC Kimlik No, şifre, adres vb.) yazmayın.** Yapay zeka sistemleri girdileri işleyebilir, gizliliğinizi korumak sizin sorumluluğunuzdadır.
+        
+        ⏳ **API LİMİTİ UYARISI:** Sistemin günlük kullanım limiti **1.000 istektir**. Eğer bir limit uyarısı alırsanız, lütfen yarın tekrar deneyin.
         """
     }
 }
@@ -61,7 +66,7 @@ db = db_baglantisi()
 
 def db_olustur():
     if SUPABASE_AKTIF and not isinstance(db, sqlite3.Connection):
-        # Supabase tablosunu manuel oluşturman gerekir (Aşağıda anlattım)
+        # Supabase tablosunu manuel oluşturman gerekir
         pass
     else:
         c = db.cursor()
@@ -284,6 +289,9 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                 st.error(f"⚠️ Beklenmeyen bir hata oluştu: {e}")
                 cevap = "Bir hata oluştu."
     
+    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+    kaydet_sohbet(st.session_state.mesajlar)
+    st.rerun()
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
     st.rerun()
