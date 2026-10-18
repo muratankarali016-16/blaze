@@ -16,22 +16,22 @@ try:
 except ImportError:
     SUPABASE_AKTIF = False
 
-st.set_page_config(page_title="BlazeGPT - Profesyonel", page_icon="🔥", layout="centered")
+st.set_page_config(page_title="BlazeX - Akıllı Asistan", page_icon="🔥", layout="centered")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
-        "baslik": "BlazeGPT", "alt_baslik": "Sesli, Görsel ve Akıllı Asistan ⚡",
+        "baslik": "BlazeX", "alt_baslik": "Sesli, Görsel ve Akıllı Asistan ⚡",
         "sohbetler": "💬 Sohbetler", "yeni_sohbet": "➕ Yeni Sohbet",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeGPT 🔥",
+        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "ozel_karakter": "Kendi Karakterini Yarat", "karakter_yaz": "Karakter talimatını yaz...",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
         "aydinlatma": "📜 Gizlilik ve Aydınlatma",
         "aydinlatma_metni": """
-        **Veri Sorumlusu:** BlazeGPT (Kişisel Kullanım)
+        **Veri Sorumlusu:** BlazeX (Kişisel Kullanım)
         
         Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir. 
         - **İşlenen Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
@@ -154,7 +154,7 @@ with st.sidebar:
     
     if st.session_state.mesajlar:
         sohbet_metni = "".join([f"{m['role']}: {m['content']}\n\n" for m in st.session_state.mesajlar if isinstance(m['content'], str)])
-        st.download_button(CEVIRI["tr"]["disa_aktar"], sohbet_metni, f"blazegpt_{datetime.now().strftime('%Y%m%d')}.txt", use_container_width=True)
+        st.download_button(CEVIRI["tr"]["disa_aktar"], sohbet_metni, f"blazex_{datetime.now().strftime('%Y%m%d')}.txt", use_container_width=True)
     
     st.markdown("---")
     gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
@@ -289,9 +289,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                 st.error(f"⚠️ Beklenmeyen bir hata oluştu: {e}")
                 cevap = "Bir hata oluştu."
     
-    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-    kaydet_sohbet(st.session_state.mesajlar)
-    st.rerun()
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
     st.rerun()
