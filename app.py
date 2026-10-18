@@ -6,9 +6,11 @@ from datetime import datetime
 import requests
 from io import BytesIO
 import uuid
+import base64
+import io
 
 st.set_page_config(
-    page_title="BlazeGPT - Ücretsiz Yapay Zeka",
+    page_title="BlazeGPT - Akıllı Asistan",
     page_icon="🔥",
     layout="centered"
 )
@@ -17,53 +19,25 @@ st.set_page_config(
 CEVIRI = {
     "tr": {
         "dil_adi": "🇹🇷 Türkçe", "baslik": "BlazeGPT",
-        "alt_baslik": "Groq + Pollinations ile görsel zekası ⚡",
+        "alt_baslik": "Görsel Zeka + Gelişmiş Asistan ⚡",
         "sohbetler": "💬 Sohbetler", "yeni_sohbet": "➕ Yeni Sohbet",
         "sohbet_yok": "Henüz sohbet yok", "ayarlar": "⚙️ Ayarlar",
         "model": "🧠 Model", "kisilik": "🎭 Kişilik",
         "gorsel_modu": "🎨 Görsel Oluşturma",
         "gorsel_olusturuluyor": "🎨 Görsel oluşturuluyor...",
-        "hosgeldin": "Merhaba! Ben BlazeGPT 🔥 Sohbet edebilir, görsel oluşturabilir, sorularını cevaplayabilirim. Hadi başlayalım!",
-        "sor": "Bir şey sor...",
+        "vision_modu": "📷 Görsel Analizi (Fotoğraf Yükle)",
+        "vision_analiz": "🔍 Görseli Analiz Et",
+        "vision_yukleniyor": "📷 Görsel yükleniyor...",
+        "disa_aktar": "📥 Sohbeti İndir (TXT)",
+        "hosgeldin": "Merhaba! Ben BlazeGPT 🔥 Sohbet edebilir, görsel oluşturabilir ve yüklediğin fotoğrafları analiz edebilirim. Hadi başlayalım!",
+        "sor": "Bir şey sor veya fotoğraf yükle...",
         "kisilikler": {
-            "Samimi Arkadaş": """Sen BlazeGPT adında samimi, esprili ve yardımcı bir yapay zeka asistanısın. 
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Samimi ve sıcak bir dil kullan, arkadaş gibi konuş.
-- Bilmediğin konularda "bilmiyorum" demek yerine, elindeki bilgilerle MANTIKLI TAHMİNLER yürüt ve "tahminimce" diye belirt.
-- Spor, siyaset, güncel olaylar gibi konularda yorum yapabilirsin ama "kesin bilgi" verme, olasılıklardan bahset.
-- Kısa ve öz cevap ver, gereksiz uzatma.
-- Emoji kullanabilirsin ama abartma.
-- Kullanıcıya "sen" diye hitap et.
-- Espri yapabilirsin, ama saygılı ol.""",
-            "Profesyonel": """Sen BlazeGPT adında profesyonel bir yapay zeka asistanısın.
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Ciddi, net ve profesyonel bir dil kullan.
-- Bilmediğin konularda tahmin yürütme, "bu konuda kesin bilgim yok" de.
-- Kısa ve öz cevap ver.""",
-            "Öğretmen": """Sen sabırlı ve öğretici bir öğretmensin.
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Konuları basit örneklerle, adım adım anlat.
-- Karmaşık şeyleri günlük hayattan örneklerle açıkla.""",
-            "Şair": """Sen duygusal ve yaratıcı bir şairsin.
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Cevaplarını şiirsel, edebi bir dille yaz.
-- Metaforlar ve benzetmeler kullan.""",
-            "Kod Ustası": """Sen uzman bir yazılımcısın.
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Kod sorularına temiz, yorumlu ve çalışan kodlarla cevap ver.
-- Kodun nasıl çalıştığını açıkla.""",
-            "Komedyen": """Sen esprili bir komedyensin.
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Cevaplarına mizah kat, espriler yap.
-- Ama bilgiyi doğru ver."""
+            "Samimi Arkadaş": "Sen BlazeGPT adında samimi, esprili ve yardımcı bir yapay zeka asistanısın. Her zaman Türkçe cevap ver. Bilmediğin konularda mantıklı tahminler yürüt. Kısa ve öz ol.",
+            "Profesyonel": "Sen BlazeGPT adında profesyonel bir asistansın. Türkçe cevap ver. Ciddi ve net ol.",
+            "Öğretmen": "Sen sabırlı bir öğretmensin. Konuları basit örneklerle, adım adım anlat. Türkçe cevap ver.",
+            "Kod Ustası": "Sen uzman bir yazılımcısın. Temiz ve çalışan kodlar yaz. Türkçe açıkla."
         },
-        "kisilik_isimleri": ["Samimi Arkadaş", "Profesyonel", "Öğretmen", "Şair", "Kod Ustası", "Komedyen"],
+        "kisilik_isimleri": ["Samimi Arkadaş", "Profesyonel", "Öğretmen", "Kod Ustası"],
         "hata": "⚠️ Hata", "gorsel_hata": "Görsel oluşturulamadı.",
         "gorsel_ayarlari": "🖼️ Görsel Ayarları",
         "gorsel_sayisi": "Görsel Sayısı", "gorsel_boyut": "Boyut",
@@ -71,72 +45,20 @@ Kuralların:
         "indir": "💾 İndir", "tema": "🎨 Tema", "galeri": "🖼️ Galeri",
         "galeri_bos": "Henüz kaydedilmiş görsel yok",
         "kopyala": "📋", "kopyalanacak": "📋 Kopyalanacak Metin", "kapat": "❌ Kapat"
-    },
-    "en": {
-        "dil_adi": "🇬🇧 English", "baslik": "BlazeGPT",
-        "alt_baslik": "Visual intelligence with Groq + Pollinations ⚡",
-        "sohbetler": "💬 Chats", "yeni_sohbet": "➕ New Chat",
-        "sohbet_yok": "No chats yet", "ayarlar": "⚙️ Settings",
-        "model": "🧠 Model", "kisilik": "🎭 Personality",
-        "gorsel_modu": "🎨 Image Generation",
-        "gorsel_olusturuluyor": "🎨 Generating image...",
-        "hosgeldin": "Hello! I'm BlazeGPT 🔥 I can chat, generate images, and answer your questions. Let's start!",
-        "sor": "Ask something...",
-        "kisilikler": {
-            "Friendly": """You are BlazeGPT, a friendly, witty, and helpful AI assistant.
-Rules:
-- Always answer in English.
-- Use a warm, friendly tone.
-- For unknown topics, make LOGICAL GUESSES and say "my guess is".
-- Be concise.
-- Use emojis but don't overdo it.""",
-            "Professional": """You are BlazeGPT, a professional AI assistant.
-Rules:
-- Always answer in English.
-- Use serious, clear, professional language.""",
-            "Teacher": """You are a patient, teaching AI.
-Rules:
-- Always answer in English.
-- Explain with simple examples.""",
-            "Poet": """You are an emotional poet.
-Rules:
-- Always answer in English.
-- Write poetically.""",
-            "Coder": """You are an expert programmer.
-Rules:
-- Always answer in English.
-- Provide clean, commented code.""",
-            "Comedian": """You are a funny comedian.
-Rules:
-- Always answer in English.
-- Add humor."""
-        },
-        "kisilik_isimleri": ["Friendly", "Professional", "Teacher", "Poet", "Coder", "Comedian"],
-        "hata": "⚠️ Error", "gorsel_hata": "Could not generate image.",
-        "gorsel_ayarlari": "🖼️ Image Settings",
-        "gorsel_sayisi": "Number of Images", "gorsel_boyut": "Size",
-        "kare": "⬛ Square", "yatay": "▬ Landscape", "dikey": "▮ Portrait",
-        "indir": "💾 Download", "tema": "🎨 Theme", "galeri": "🖼️ Gallery",
-        "galeri_bos": "No saved images yet",
-        "kopyala": "📋", "kopyalanacak": "📋 Text to Copy", "kapat": "❌ Close"
     }
 }
 
-# --- MODELLER (GÜNCEL - 2026) ---
+# --- MODELLER ---
 MODELLER = [
-    "openai/gpt-oss-120b",        # Büyük ve zeki (önerilen)
-    "openai/gpt-oss-20b",         # Küçük ve hızlı
-    "qwen/qwen3.8-27b",           # Çok dilli
-    "llama-3.1-8b-instant",       # Hızlı (hala aktif)
-    "gemma2-9b-it"                # Google
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "llama-3.1-8b-instant",
+    "qwen/qwen3.8-27b" # Bu model Vision (Görsel) destekler
 ]
 
 TEMALAR = {
     "deepseek": {"ad": "🔵 DeepSeek", "arka": "#1e1e2e", "kenar": "#181825", "balon": "#262637", "vurgu": "#4d6bfe", "metin": "#e0e0e0", "kullanici_balon": "#005c4b"},
-    "chatgpt": {"ad": "🟢 ChatGPT", "arka": "#212121", "kenar": "#171717", "balon": "#2f2f2f", "vurgu": "#10a37f", "metin": "#ececec", "kullanici_balon": "#0d5c4f"},
-    "blaze": {"ad": "🔥 Blaze", "arka": "#0f0f0f", "kenar": "#1a0f08", "balon": "#1a1a1a", "vurgu": "#ff6b35", "metin": "#e8e8e8", "kullanici_balon": "#8b2500"},
-    "gece": {"ad": "🌙 Gece", "arka": "#0a1929", "kenar": "#061220", "balon": "#132f4c", "vurgu": "#5090d3", "metin": "#e7ebf0", "kullanici_balon": "#0d4770"},
-    "mor": {"ad": "🟣 Mor", "arka": "#1a0f2e", "kenar": "#100820", "balon": "#2a1a45", "vurgu": "#a855f7", "metin": "#e8e0f0", "kullanici_balon": "#6b21a8"}
+    "chatgpt": {"ad": "🟢 ChatGPT", "arka": "#212121", "kenar": "#171717", "balon": "#2f2f2f", "vurgu": "#10a37f", "metin": "#ececec", "kullanici_balon": "#0d5c4f"}
 }
 
 if "kullanici_id" not in st.session_state:
@@ -155,7 +77,6 @@ def db_olustur():
     conn = db_baglantisi()
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS sohbetler (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, baslik TEXT, olusturma TEXT, guncelleme TEXT, mesajlar TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS galeri (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, prompt TEXT, gorsel BLOB, tarih TEXT)")
     conn.commit()
     conn.close()
 
@@ -187,7 +108,7 @@ def sohbet_guncelle(sid, mesajlar):
     baslik = "Yeni Sohbet"
     for m in mesajlar:
         if m["role"] == "user" and isinstance(m["content"], str):
-            baslik = m["content"][:40] + ("..." if len(m["content"]) > 40 else "")
+            baslik = m["content"][:40]
             break
     c.execute("UPDATE sohbetler SET mesajlar = ?, guncelleme = ?, baslik = ? WHERE id = ? AND kullanici_id = ?",
               (json.dumps(mesajlar, ensure_ascii=False), simdi, baslik, sid, st.session_state.kullanici_id))
@@ -209,30 +130,6 @@ def sohbet_sil(sid):
     conn.commit()
     conn.close()
 
-def galeri_ekle(prompt, gorsel_bytes):
-    conn = db_baglantisi()
-    c = conn.cursor()
-    simdi = datetime.now().isoformat()
-    c.execute("INSERT INTO galeri (kullanici_id, prompt, gorsel, tarih) VALUES (?, ?, ?, ?)",
-              (st.session_state.kullanici_id, prompt, gorsel_bytes, simdi))
-    conn.commit()
-    conn.close()
-
-def galeri_getir():
-    conn = db_baglantisi()
-    c = conn.cursor()
-    c.execute("SELECT id, prompt, gorsel, tarih FROM galeri WHERE kullanici_id = ? ORDER BY tarih DESC", (st.session_state.kullanici_id,))
-    r = c.fetchall()
-    conn.close()
-    return r
-
-def galeri_sil(gid):
-    conn = db_baglantisi()
-    c = conn.cursor()
-    c.execute("DELETE FROM galeri WHERE id = ? AND kullanici_id = ?", (gid, st.session_state.kullanici_id))
-    conn.commit()
-    conn.close()
-
 def gorsel_olustur(prompt, genislik, yukseklik, seed=0):
     try:
         url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}"
@@ -246,36 +143,21 @@ def tema_uygula(tema_adi):
     t = TEMALAR.get(tema_adi, TEMALAR["deepseek"])
     st.markdown(f"""
     <style>
-        .element-container, .stMarkdown, div[data-testid="stVerticalBlock"] > div {{ margin: 0 !important; padding: 0 !important; gap: 0 !important; }}
         .stApp {{ background: {t['arka']}; }}
-        .ana-baslik {{ text-align: center; color: {t['vurgu']}; font-size: 2.5em; font-weight: 700; margin-bottom: 0; margin-top: 10px; }}
+        .ana-baslik {{ text-align: center; color: {t['vurgu']}; font-size: 2.5em; font-weight: 700; margin-bottom: 0; }}
         .alt-baslik {{ text-align: center; color: #7a7a8e; margin-top: 0; margin-bottom: 15px; font-size: 0.9em; }}
         .sohbet-alani {{ display: flex; flex-direction: column; gap: 3px; padding: 5px; }}
         .mesaj-satir {{ display: flex; width: 100%; }}
         .mesaj-satir.sag {{ justify-content: flex-end; }}
         .mesaj-satir.sol {{ justify-content: flex-start; }}
-        .balon {{ max-width: 78%; padding: 8px 12px 4px 12px; border-radius: 16px; font-size: 0.95em; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); color: {t['metin']}; }}
-        .balon.kullanici {{ background: {t['kullanici_balon']}; color: #e9edef; border-bottom-right-radius: 4px; }}
-        .balon.bot {{ background: {t['balon']}; color: {t['metin']}; border-bottom-left-radius: 4px; }}
-        .zaman {{ font-size: 0.65em; color: #a0a0a0; margin-top: 2px; text-align: right; display: block; line-height: 1; }}
-        .balon.bot .zaman {{ text-align: left; }}
-        .stChatInput textarea {{ background: {t['balon']} !important; color: {t['metin']} !important; border: 1px solid {t['vurgu']} !important; border-radius: 12px !important; }}
-        section[data-testid="stSidebar"] {{ background: {t['kenar']}; border-right: 1px solid {t['balon']}; }}
+        .balon {{ max-width: 78%; padding: 8px 12px; border-radius: 16px; font-size: 0.95em; line-height: 1.4; color: {t['metin']}; }}
+        .balon.kullanici {{ background: {t['kullanici_balon']}; border-bottom-right-radius: 4px; }}
+        .balon.bot {{ background: {t['balon']}; border-bottom-left-radius: 4px; }}
+        .stChatInput textarea {{ background: {t['balon']} !important; color: {t['metin']} !important; border: 1px solid {t['vurgu']} !important; }}
+        section[data-testid="stSidebar"] {{ background: {t['kenar']}; }}
         section[data-testid="stSidebar"] * {{ color: {t['metin']} !important; }}
-        section[data-testid="stSidebar"] h2 {{ color: {t['vurgu']} !important; }}
-        .stButton button {{ background: {t['balon']}; color: {t['metin']}; border: 1px solid {t['vurgu']}44; border-radius: 10px; font-weight: 500; width: 100%; padding: 6px 10px; margin: 2px 0; }}
-        .stButton button:hover {{ background: {t['vurgu']}; color: white; border-color: {t['vurgu']}; }}
-        .stDownloadButton button {{ background: {t['vurgu']}; color: white; border: none; border-radius: 10px; font-size: 0.85em; padding: 5px 10px; }}
-        .kullanici-bilgi {{ text-align: center; background: linear-gradient(90deg, {t['vurgu']} 0%, {t['vurgu']}cc 100%); color: white; padding: 6px 14px; border-radius: 10px; font-size: 0.78em; margin-bottom: 10px; font-weight: 600; }}
-        .stSelectbox div[data-baseweb="select"] > div, .stTextInput input {{ background: {t['balon']} !important; color: {t['metin']} !important; border: 1px solid {t['vurgu']}44 !important; border-radius: 10px !important; }}
-        .stMarkdown h2 {{ color: {t['vurgu']} !important; }}
-        .stMarkdown h3 {{ color: {t['vurgu']}cc !important; }}
-        code {{ background: {t['kenar']} !important; color: {t['vurgu']} !important; padding: 2px 6px; border-radius: 6px; }}
-        ::-webkit-scrollbar {{ width: 8px; }}
-        ::-webkit-scrollbar-track {{ background: {t['kenar']}; }}
-        ::-webkit-scrollbar-thumb {{ background: {t['vurgu']}; border-radius: 4px; }}
-        img {{ display: block; margin-left: auto; margin-right: auto; filter: drop-shadow(0 0 15px {t['vurgu']}55); }}
-        .stAlert {{ background: {t['balon']} !important; border-radius: 10px !important; border-left: 4px solid {t['vurgu']} !important; color: {t['metin']} !important; }}
+        .stButton button {{ background: {t['balon']}; color: {t['metin']}; border: 1px solid {t['vurgu']}44; border-radius: 10px; }}
+        .stButton button:hover {{ background: {t['vurgu']}; color: white; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -289,69 +171,109 @@ if "mesajlar" not in st.session_state:
 T = CEVIRI[st.session_state.dil]
 tema_uygula(st.session_state.tema)
 
-col1, col2, col3 = st.columns([1, 1, 1])
-with col2:
-    st.image("logo.png", width=100)
+# --- BAŞLIK ---
 st.markdown(f'<h1 class="ana-baslik">{T["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="alt-baslik">{T["alt_baslik"]}</p>', unsafe_allow_html=True)
 
+# --- KENAR ÇUBUĞU ---
 with st.sidebar:
-    st.markdown(f'<div class="kullanici-bilgi">🔒 Oturum: {st.session_state.kullanici_id}</div>', unsafe_allow_html=True)
-    
-    st.markdown("## 🌐 Dil")
-    secili_dil = st.selectbox("Dil", options=list(CEVIRI.keys()), format_func=lambda x: CEVIRI[x]["dil_adi"], index=list(CEVIRI.keys()).index(st.session_state.dil), label_visibility="collapsed")
+    st.markdown(f'## 🌐 Dil & Tema')
+    secili_dil = st.selectbox("Dil", options=list(CEVIRI.keys()), format_func=lambda x: CEVIRI[x]["dil_adi"], label_visibility="collapsed")
     if secili_dil != st.session_state.dil:
         st.session_state.dil = secili_dil
         st.rerun()
-    
-    st.markdown(f"## {T['tema']}")
-    tema_secenekleri = list(TEMALAR.keys())
-    secili_tema = st.selectbox(T["tema"], options=tema_secenekleri, format_func=lambda x: TEMALAR[x]["ad"], index=tema_secenekleri.index(st.session_state.tema), label_visibility="collapsed")
+        
+    secili_tema = st.selectbox("Tema", options=list(TEMALAR.keys()), format_func=lambda x: TEMALAR[x]["ad"], label_visibility="collapsed")
     if secili_tema != st.session_state.tema:
         st.session_state.tema = secili_tema
         st.rerun()
     
     st.markdown("---")
     st.markdown(f"## {T['sohbetler']}")
-    if st.button(T["yeni_sohbet"]):
+    if st.button(T["yeni_sohbet"], use_container_width=True):
         st.session_state.aktif_sohbet_id = yeni_sohbet()
         st.session_state.mesajlar = []
         st.rerun()
-    st.markdown("---")
     
+    # Sohbet Listesi
     sohbetler = tum_sohbetler()
-    if sohbetler:
-        for s_id, s_baslik, s_tarih in sohbetler:
-            c1, c2 = st.columns([5, 1])
-            with c1:
-                etiket = f"💬 {s_baslik}"
-                if s_id == st.session_state.aktif_sohbet_id:
-                    etiket = f"✅ {s_baslik}"
-                if st.button(etiket, key=f"sohbet_{s_id}"):
-                    st.session_state.aktif_sohbet_id = s_id
-                    st.session_state.mesajlar = sohbet_getir(s_id)
-                    st.rerun()
-            with c2:
-                if st.button("🗑️", key=f"sil_{s_id}"):
-                    sohbet_sil(s_id)
-                    if s_id == st.session_state.aktif_sohbet_id:
-                        st.session_state.aktif_sohbet_id = yeni_sohbet()
-                        st.session_state.mesajlar = []
-                    st.rerun()
-    else:
-        st.caption(T["sohbet_yok"])
+    for s_id, s_baslik, _ in sohbetler:
+        c1, c2 = st.columns([4, 1])
+        with c1:
+            etiket = f"✅ {s_baslik}" if s_id == st.session_state.aktif_sohbet_id else f"💬 {s_baslik}"
+            if st.button(etiket, key=f"soh_{s_id}", use_container_width=True):
+                st.session_state.aktif_sohbet_id = s_id
+                st.session_state.mesajlar = sohbet_getir(s_id)
+                st.rerun()
+        with c2:
+            if st.button("🗑️", key=f"sil_{s_id}"):
+                sohbet_sil(s_id)
+                st.session_state.aktif_sohbet_id = yeni_sohbet()
+                st.session_state.mesajlar = []
+                st.rerun()
     
     st.markdown("---")
     st.markdown(f"## {T['ayarlar']}")
-    model = st.selectbox(T["model"], MODELLER, index=0)
+    model = st.selectbox(T["model"], MODELLER)
     kisi_secim = st.selectbox(T["kisilik"], T["kisilik_isimleri"])
     kisi = T["kisilikler"][kisi_secim]
     
     st.markdown("---")
-    gorsel_modu = st.toggle(T["gorsel_modu"], value=False)
     
+    # --- 1. SOHBETİ DIŞA AKTARMA ---
+    if st.session_state.mesajlar:
+        sohbet_metni = ""
+        for m in st.session_state.mesajlar:
+            if isinstance(m["content"], str):
+                rol = "Sen" if m["role"] == "user" else "BlazeGPT"
+                sohbet_metni += f"{rol}: {m['content']}\n\n"
+        
+        st.download_button(
+            label=T["disa_aktar"],
+            data=sohbet_metni,
+            file_name=f"blazegpt_sohbet_{datetime.now().strftime('%Y%m%d')}.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+    
+    st.markdown("---")
+    
+    # --- 2. GÖRSEL ANALİZİ (VISION) ---
+    with st.expander(T["vision_modu"]):
+        yuklenen_resim = st.file_uploader("Bir fotoğraf seç (JPG/PNG)", type=["jpg", "jpeg", "png"])
+        if yuklenen_resim is not None:
+            st.image(yuklenen_resim, caption="Yüklenen Görsel", use_container_width=True)
+            if st.button(T["vision_analiz"], use_container_width=True):
+                with st.spinner(T["vision_yukleniyor"]):
+                    # Resmi Base64'e çevir
+                    img_bytes = yuklenen_resim.getvalue()
+                    base64_image = base64.b64encode(img_bytes).decode('utf-8')
+                    
+                    try:
+                        # Groq Vision API çağrısı
+                        cevap = client.chat.completions.create(
+                            model="qwen/qwen3.8-27b", # Vision destekli model
+                            messages=[{
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": "Bu görselde ne var? Detaylıca analiz et."},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]
+                            }]
+                        )
+                        analiz_sonucu = cevap.choices[0].message.content
+                        
+                        # Sonucu sohbete ekle
+                        st.session_state.mesajlar.append({"role": "user", "content": "📷 [Bir fotoğraf yükledim]"})
+                        st.session_state.mesajlar.append({"role": "assistant", "content": f"🖼️ **Görsel Analizi:**\n\n{analiz_sonucu}"})
+                        sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Hata: {e}")
+
+    st.markdown("---")
+    gorsel_modu = st.toggle(T["gorsel_modu"], value=False)
     if gorsel_modu:
-        st.markdown(f"### {T['gorsel_ayarlari']}")
         gorsel_sayisi = st.slider(T["gorsel_sayisi"], min_value=1, max_value=4, value=4)
         boyut_secim = st.radio(T["gorsel_boyut"], [T["kare"], T["yatay"], T["dikey"]])
         if boyut_secim == T["kare"]:
@@ -361,14 +283,15 @@ with st.sidebar:
         else:
             genislik, yukseklik = 720, 1280
 
+# --- KOPYALAMA ALANI ---
 if st.session_state.kopyalanacak:
     st.markdown(f"### {T['kopyalanacak']}")
     st.code(st.session_state.kopyalanacak, language=None)
     if st.button(T["kapat"]):
         st.session_state.kopyalanacak = ""
         st.rerun()
-    st.markdown("---")
 
+# --- SOHBET ALANI ---
 tab1, tab2 = st.tabs(["💬 Sohbet", T["galeri"]])
 
 with tab1:
@@ -376,22 +299,21 @@ with tab1:
         st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{T["hosgeldin"]}</div></div></div>', unsafe_allow_html=True)
     else:
         for i, m in enumerate(st.session_state.mesajlar):
-            if not isinstance(m["content"], str):
-                continue
+            if not isinstance(m["content"], str): continue
             icerik_html = m["content"].replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-            zaman = datetime.now().strftime("%H:%M")
             
             if m["role"] == "user":
-                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sag"><div class="balon kullanici">{icerik_html}<span class="zaman">{zaman} ✓✓</span></div></div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sag"><div class="balon kullanici">{icerik_html}</div></div></div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{icerik_html}<span class="zaman">{zaman}</span></div></div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="sohbet-alani"><div class="mesaj-satir sol"><div class="balon bot">{icerik_html}</div></div></div>', unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns([1, 1, 8])
             with c1:
                 if st.button("📋", key=f"kopya_{i}", help=T["kopyala"]):
                     st.session_state.kopyalanacak = m["content"]
                     st.rerun()
-    
+
+    # --- GİRİŞ ---
     if soru := st.chat_input(T["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         cevap = ""
@@ -402,14 +324,12 @@ with tab1:
                     veri = gorsel_olustur(soru, genislik, yukseklik, seed=i*1000)
                     if veri:
                         gorseller.append(veri)
-                        galeri_ekle(soru, veri)
                 if gorseller:
                     cevap = f"🖼️ {len(gorseller)} görsel oluşturuldu: {soru}"
                     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
                     sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
                     if len(gorseller) == 1:
                         st.image(BytesIO(gorseller[0]), use_container_width=True)
-                        st.download_button(label=T["indir"], data=gorseller[0], file_name="blazegpt_1.png", mime="image/png")
                     else:
                         for i in range(0, len(gorseller), 2):
                             cols = st.columns(2)
@@ -418,12 +338,10 @@ with tab1:
                                 if idx < len(gorseller):
                                     with col:
                                         st.image(BytesIO(gorseller[idx]), use_container_width=True)
-                                        st.download_button(label=T["indir"], data=gorseller[idx], file_name=f"blazegpt_{idx+1}.png", mime="image/png", key=f"indir_{idx}")
                     st.rerun()
                 else:
                     cevap = T["gorsel_hata"]
                     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-                    sohbet_guncelle(st.session_state.aktif_sohbet_id, st.session_state.mesajlar)
                     st.rerun()
         else:
             tam = ""
@@ -436,8 +354,7 @@ with tab1:
                     max_tokens=2048
                 )
                 for parca in stream:
-                    icerik = parca.choices[0].delta.content or ""
-                    tam += icerik
+                    tam += parca.choices[0].delta.content or ""
                 cevap = tam
             except Exception as e:
                 cevap = f"{T['hata']}: {e}"
@@ -446,33 +363,4 @@ with tab1:
             st.rerun()
 
 with tab2:
-    st.markdown(f"### {T['galeri']}")
-    gorseller = galeri_getir()
-    if gorseller:
-        for gid, prompt, gorsel_bytes, tarih in gorseller:
-            with st.container():
-                st.image(BytesIO(gorsel_bytes), use_container_width=True)
-                st.caption(f"📝 {prompt}")
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.download_button(label=T["indir"], data=gorsel_bytes, file_name=f"galeri_{gid}.png", mime="image/png", key=f"galeri_indir_{gid}")
-                with c2:
-                    if st.button("🗑️", key=f"galeri_sil_{gid}"):
-                        galeri_sil(gid)
-                        st.rerun()
-                st.markdown("---")
-    else:
-        st.info(T["galeri_bos"]) 
-        st.markdown("---")
-st.markdown("### 📜 Aydınlatma Metni")
-st.caption("""
-**Veri Sorumlusu:** BlazeGPT (Kişisel Kullanım)  
-**İletişim:** []
-Bu uygulama, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında aşağıdaki şekilde aydınlatma yapmaktadır:
-
-**1. İşlenen Kişisel Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
-**2. İşleme Amaçları:** Yapay zeka hizmetinin sunulması, sohbetlerinizin kaydedilmesi ve size özel deneyim sağlanması.
-**3. Aktarım:** Hizmetin sağlanabilmesi için sohbet içerikleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır. Bu aktarım KVKK'nın 9. maddesi kapsamında yurt dışına aktarım niteliğindedir.
-**4. Hukuki Sebep:** KVKK'nın 5. maddesi uyarınca "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması" ve "meşru menfaat" hukuki sebeplerine dayanmaktadır.
-**5. Haklarınız:** KVKK'nın 11. maddesi kapsamında verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini talep etme haklarına sahipsiniz. Başvuru için [].
-""")
+    st.info(T["galeri_bos"])
