@@ -9,7 +9,14 @@ from io import BytesIO
 import uuid
 import base64
 
-st.set_page_config(page_title="BlazeGPT - Süper", page_icon="🔥", layout="centered")
+# Supabase için (Eğer kullanırsan)
+try:
+    from supabase import create_client, Client
+    SUPABASE_AKTIF = True
+except ImportError:
+    SUPABASE_AKTIF = False
+
+st.set_page_config(page_title="BlazeGPT - Profesyonel", page_icon="🔥", layout="centered")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
@@ -17,11 +24,19 @@ CEVIRI = {
         "baslik": "BlazeGPT", "alt_baslik": "Sesli, Görsel ve Akıllı Asistan ⚡",
         "sohbetler": "💬 Sohbetler", "yeni_sohbet": "➕ Yeni Sohbet",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeGPT 🔥 Artık sesli konuşabiliyor, dosya okuyabiliyor ve özel karakterlere bürünebiliyorum!",
+        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeGPT 🔥",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
-        "ozel_karakter": "Kendi Karakterini Yarat", "karakter_yaz": "Karakter talimatını yaz (örn: Sen korsan gibi konuşan bir yazılımcısın)...",
+        "ozel_karakter": "Kendi Karakterini Yarat", "karakter_yaz": "Karakter talimatını yaz...",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
-        "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:"
+        "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
+        "aydinlatma": "📜 Gizlilik ve Aydınlatma",
+        "aydinlatma_metni": """
+        **Veri Sorumlusu:** BlazeGPT (Kişisel Kullanım)
+        Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir.
+        - **İşlenen Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
+        - **Aktarım:** Hizmet için sohbet içerikleri Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
+        - **Haklarınız:** Verilerinizin silinmesini talep etme hakkına sahipsiniz.
+        """
     }
 }
 
@@ -33,34 +48,65 @@ if "kullanici_id" not in st.session_state:
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = []
 
-# --- VERİTABANI ---
+# --- SUPABASE VEYA SQLITE BAĞLANTISI ---
 def db_baglantisi():
-    return sqlite3.connect("blazegpt.db", check_same_thread=False)
+    if SUPABASE_AKTIF and "SUPABASE_URL" in st.secrets and "SUPABASE_KEY" in st.secrets:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    else:
+        return sqlite3.connect("blazegpt.db", check_same_thread=False)
+
+db = db_baglantisi()
 
 def db_olustur():
-    conn = db_baglantisi()
-    c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS sohbetler (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, baslik TEXT, mesajlar TEXT)")
-    conn.commit()
-    conn.close()
+    if SUPABASE_AKTIF and not isinstance(db, sqlite3.Connection):
+        # Supabase tablosunu manuel oluşturman gerekir (Aşağıda anlattım)
+        pass
+    else:
+        c = db.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS sohbetler (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, baslik TEXT, mesajlar TEXT)")
+        db.commit()
+
 db_olustur()
 
 def kaydet_sohbet(mesajlar):
-    conn = db_baglantisi()
-    c = conn.cursor()
     baslik = "Sohbet"
     for m in mesajlar:
         if m["role"] == "user" and isinstance(m["content"], str):
             baslik = m["content"][:30]
             break
-    c.execute("INSERT INTO sohbetler (kullanici_id, baslik, mesajlar) VALUES (?, ?, ?)", (st.session_state.kullanici_id, baslik, json.dumps(mesajlar, ensure_ascii=False)))
-    conn.commit()
-    conn.close()
+            
+    if SUPABASE_AKTIF and not isinstance(db, sqlite3.Connection):
+        try:
+            db.table("sohbetler").insert({
+                "kullanici_id": st.session_state.kullanici_id,
+                "baslik": baslik,
+                "mesajlar": mesajlar
+            }).execute()
+        except Exception as e:
+            print(f"Supabase Hatası: {e}")
+    else:
+        c = db.cursor()
+        c.execute("INSERT INTO sohbetler (kullanici_id, baslik, mesajlar) VALUES (?, ?, ?)", 
+                  (st.session_state.kullanici_id, baslik, json.dumps(mesajlar, ensure_ascii=False)))
+        db.commit()
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 
-# --- TTS (Sesli Okuma) JS Kodu ---
+# --- ARAYÜZ (CSS) ---
+st.markdown("""
+<style>
+    .stApp { background-color: #1e1e2e; }
+    .stChatMessage { border-radius: 15px; padding: 10px; margin-bottom: 10px; }
+    .stButton button { background: #4d6bfe; color: white; border-radius: 10px; border: none; transition: 0.3s; }
+    .stButton button:hover { background: #3b55d9; transform: scale(1.02); }
+    .logo-img { display: block; margin-left: auto; margin-right: auto; filter: drop-shadow(0 0 10px #4d6bfe); }
+</style>
+""", unsafe_allow_html=True)
+
+# --- TTS ---
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"""
@@ -79,8 +125,8 @@ def sesli_oku(metin):
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image("logo.png", width=100)
-st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; font-size: 2.5em; margin-bottom: 0;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
-st.markdown(f'<p style="text-align: center; color: #888;">{CEVIRI["tr"]["alt_baslik"]}</p>', unsafe_allow_html=True)
+st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; font-size: 2.5em; margin-bottom: 0; text-shadow: 0 0 20px #4d6bfe;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
+st.markdown(f'<p style="text-align: center; color: #a0a0b0;">{CEVIRI["tr"]["alt_baslik"]}</p>', unsafe_allow_html=True)
 
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
@@ -101,19 +147,16 @@ with st.sidebar:
         
     st.markdown("---")
     
-    # Sohbeti indirme
     if st.session_state.mesajlar:
         sohbet_metni = "".join([f"{m['role']}: {m['content']}\n\n" for m in st.session_state.mesajlar if isinstance(m['content'], str)])
-        st.download_button(
-            label=CEVIRI["tr"]["disa_aktar"], 
-            data=sohbet_metni, 
-            file_name=f"blazegpt_{datetime.now().strftime('%Y%m%d')}.txt", 
-            mime="text/plain",
-            use_container_width=True
-        )
+        st.download_button(CEVIRI["tr"]["disa_aktar"], sohbet_metni, f"blazegpt_{datetime.now().strftime('%Y%m%d')}.txt", use_container_width=True)
     
     st.markdown("---")
     gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
+    
+    # KVKK AYDINLATMA METNİ
+    with st.expander(CEVIRI["tr"]["aydinlatma"]):
+        st.write(CEVIRI["tr"]["aydinlatma_metni"])
 
 # --- SOHBET ALANI ---
 if not st.session_state.mesajlar:
@@ -122,13 +165,11 @@ if not st.session_state.mesajlar:
 for i, m in enumerate(st.session_state.mesajlar):
     if not isinstance(m["content"], str): continue
     
-    # Balon tasarımı (WhatsApp Tarzı)
     if m["role"] == "user":
-        st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 10px; border-radius: 10px; color: white; display: inline-block; max-width: 80%; text-align: left;">{m["content"]}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 12px; border-radius: 15px; color: white; display: inline-block; max-width: 80%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">{m["content"]}</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div style="text-align: left; margin-bottom: 10px;"><span style="background: #262637; padding: 10px; border-radius: 10px; color: white; display: inline-block; max-width: 80%;">{m["content"]}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: left; margin-bottom: 10px;"><span style="background: #262637; padding: 12px; border-radius: 15px; color: white; display: inline-block; max-width: 80%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">{m["content"]}</span></div>', unsafe_allow_html=True)
     
-    # Bot mesajıysa Dinle ve Kopyala butonları
     if m["role"] == "assistant":
         c1, c2, c3 = st.columns([1, 1, 8])
         with c1:
@@ -138,7 +179,7 @@ for i, m in enumerate(st.session_state.mesajlar):
             if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"):
                 st.code(m["content"])
 
-# --- DOSYA YÜKLEME VE VİZYON ---
+# --- DOSYA YÜKLEME ---
 with st.expander("📎 Dosya / Görsel Ekle"):
     yuklenen_resim = st.file_uploader("Görsel seç (JPG/PNG)", type=["jpg", "png", "jpeg"])
     if yuklenen_resim and st.button(CEVIRI["tr"]["vision_analiz"]):
@@ -149,7 +190,7 @@ with st.expander("📎 Dosya / Görsel Ekle"):
                 cevap = client.chat.completions.create(
                     model=VISION_MODEL,
                     messages=[{"role": "user", "content": [
-                        {"type": "text", "text": "Bu görselde ne var? Detaylıca analiz et."},
+                        {"type": "text", "text": "Bu görselde ne var?"},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
                     ]}]
                 )
@@ -158,10 +199,10 @@ with st.expander("📎 Dosya / Görsel Ekle"):
                 kaydet_sohbet(st.session_state.mesajlar)
                 st.rerun()
             except Exception as e:
-                st.error(f"Hata: {e}")
+                st.error(f"Görsel analiz hatası: {e}")
 
-# --- MİKROFON (SESLİ GİRİŞ) ---
-st.markdown("**🎤 Sesli Giriş (Chrome/Edge destekler):**")
+# --- MİKROFON ---
+st.markdown("**🎤 Sesli Giriş:**")
 sesli_giris_js = """
 <script>
 function startDictation() {
@@ -173,12 +214,9 @@ function startDictation() {
         recognition.start();
         recognition.onresult = function(e) {
             var text = e.results[0][0].transcript;
-            // Streamlit'in chat input alanına yazı yazdırmak zor olduğu için uyarı veriyoruz
-            alert("Duyduğum: " + text + "\\n\\nLütfen bu metni kopyalayıp aşağıdaki kutuya yapıştırın.");
+            alert("Duyduğum: " + text + "\\n\\nLütfen kopyalayıp kutuya yapıştırın.");
             recognition.stop();
         };
-    } else {
-        alert("Tarayıcınız sesli girişi desteklemiyor. Lütfen Chrome kullanın.");
     }
 }
 </script>
@@ -186,20 +224,23 @@ function startDictation() {
 """
 st.components.v1.html(sesli_giris_js, height=60)
 
-# --- GİRİŞ KUTUSU ---
+# --- GİRİŞ KUTUSU VE HATA YÖNETİMİ ---
 if soru := st.chat_input(CEVIRI["tr"]["sor"]):
     st.session_state.mesajlar.append({"role": "user", "content": soru})
     
     cevap = ""
     if gorsel_modu:
         with st.spinner("🎨 Görsel oluşturuluyor..."):
-            url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
-            r = requests.get(url, timeout=90)
-            if r.status_code == 200:
-                st.image(BytesIO(r.content), use_container_width=True)
-                cevap = f"🖼️ Görsel oluşturuldu: {soru}"
-            else:
-                cevap = "Görsel oluşturulamadı."
+            try:
+                url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
+                r = requests.get(url, timeout=90)
+                if r.status_code == 200:
+                    st.image(BytesIO(r.content), use_container_width=True)
+                    cevap = f"🖼️ Görsel oluşturuldu: {soru}"
+                else:
+                    cevap = "Görsel oluşturulamadı."
+            except Exception as e:
+                cevap = f"Görsel hatası: {e}"
     else:
         tam = ""
         try:
@@ -215,7 +256,7 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
 
             mesajlar_gonder = [{"role": "system", "content": kisi}]
             if arama_sonucu:
-                mesajlar_gonder.append({"role": "system", "content": f"İşte internette bulduğun güncel bilgiler:\n{arama_sonucu}"})
+                mesajlar_gonder.append({"role": "system", "content": f"İşte güncel bilgiler:\n{arama_sonucu}"})
             mesajlar_gonder += st.session_state.mesajlar
             
             stream = client.chat.completions.create(
@@ -234,11 +275,14 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                     cevap += f"- [{r['title']}]({r['url']})\n"
                     
         except Exception as e:
-            cevap = f"Hata: {e}"
-    
-    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-    kaydet_sohbet(st.session_state.mesajlar)
-    st.rerun()
+            # API LİMİT HATASI YAKALAMA
+            hata_mesaji = str(e)
+            if "429" in hata_mesaji or "rate limit" in hata_mesaji.lower():
+                st.error("⏳ **API Limitine Takıldık!** Groq'un ücretsiz limiti doldu. Lütfen 1 dakika bekleyip tekrar deneyin veya ayarlardan daha küçük bir model (örn: openai/gpt-oss-20b) seçin.")
+                cevap = "Sistem şu an yoğun, lütfen birazdan tekrar deneyin."
+            else:
+                st.error(f"⚠️ Beklenmeyen bir hata oluştu: {e}")
+                cevap = "Bir hata oluştu."
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
