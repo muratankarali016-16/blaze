@@ -43,7 +43,28 @@ CEVIRI = {
     }
 }
 
-# Çalışan ve güncel Groq modelleri
+# İNSANSI KARAKTERLER (Yapay zekanın robotik reddetmelerini engeller)
+KISILIKLER = {
+    "Normal": """Sen BlazeX adında samimi, esprili ve yardımcı bir yapay zeka asistanısın. 
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Arkadaş canlısı ve doğal bir dil kullan.
+- Eğer bir soruya cevap veremiyorsan (hassas bir konuysa veya bilmiyorsan), asla robotik bir dille 'Bunu yapamam' deme. Bunun yerine 'Bunu yanıtlamam doğru olmaz, ama şu konuda yardımcı olabilirim...' gibi kibarca konuyu değiştir.
+- Kısa ve öz cevaplar ver, kullanıcıyı sıkmadan sohbet et.""",
+
+    "Öğretmen": """Sen sabırlı bir öğretmensin. 
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Konuları basit örneklerle, adım adım anlat. 
+- Kullanıcıyı cesaretlendir.""",
+
+    "Kod Ustası": """Sen uzman bir yazılımcısın. 
+Kuralların:
+- Her zaman Türkçe cevap ver.
+- Temiz, yorumlu ve çalışan kodlar yaz. 
+- Kodun nasıl çalıştığını kısaca açıkla."""
+}
+
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
 
@@ -110,12 +131,8 @@ with st.sidebar:
     if kisi_secim == "Özel Karakter":
         ozel_kisi = st.text_area(CEVIRI["tr"]["karakter_yaz"], "Sen yardımcı bir asistansın.")
         kisi = ozel_kisi
-    elif kisi_secim == "Öğretmen":
-        kisi = "Sen sabırlı bir öğretmensin. Türkçe cevap ver."
-    elif kisi_secim == "Kod Ustası":
-        kisi = "Sen uzman bir yazılımcısın. Türkçe açıkla."
     else:
-        kisi = "Sen yardımcı, samimi ve zeki bir asistansın. Türkçe cevap ver."
+        kisi = KISILIKLER[kisi_secim]
         
     st.markdown("---")
     
@@ -210,12 +227,17 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
             if arama_sonucu:
                 mesajlar_gonder.append({"role": "system", "content": f"İşte güncel bilgiler:\n{arama_sonucu}"})
             
-            # Modelin doğal sohbet etmesi için sistem mesajı
-            mesajlar_gonder.append({"role": "system", "content": "Eğer sana özel bir arama sonucu verilmediyse, kendi genel bilgilerinle doğal bir sohbet havasında cevap ver."})
+            # Modelin doğal ve insansı sohbet etmesi için ek talimat
+            mesajlar_gonder.append({"role": "system", "content": "Eğer sana özel bir arama sonucu verilmediyse, kendi genel bilgilerinle doğal bir sohbet havasında cevap ver. Kesinlikle robotik olma."})
             
             mesajlar_gonder += st.session_state.mesajlar
             
-            stream = client.chat.completions.create(model=model, messages=mesajlar_gonder, stream=True, temperature=0.8)
+            stream = client.chat.completions.create(
+                model=model, 
+                messages=mesajlar_gonder, 
+                stream=True, 
+                temperature=0.6  # Daha tutarlı ve insansı cevaplar için düşürüldü
+            )
             for parca in stream:
                 tam += parca.choices[0].delta.content or ""
             cevap = tam
