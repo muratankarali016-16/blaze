@@ -43,8 +43,8 @@ CEVIRI = {
     }
 }
 
-# Varsayılan modeli yüksek limitli olan yaptık
-MODELLER = ["llama-3.1-8b-instant", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+# Çalışan ve güncel Groq modelleri
+MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
 
 if "kullanici_id" not in st.session_state:
@@ -103,7 +103,7 @@ st.markdown(f'<p style="text-align: center; color: #a0a0b0;">{CEVIRI["tr"]["alt_
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
     st.markdown(f"## {CEVIRI['tr']['ayarlar']}")
-    model = st.selectbox(CEVIRI["tr"]["model"], MODELLER, index=0) # Varsayılan: llama-3.1-8b-instant
+    model = st.selectbox(CEVIRI["tr"]["model"], MODELLER, index=0) 
     
     kisi_secim = st.selectbox(CEVIRI["tr"]["kisilik"], ["Normal", "Öğretmen", "Kod Ustası", "Özel Karakter"])
     
