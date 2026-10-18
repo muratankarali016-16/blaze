@@ -33,7 +33,7 @@ if "kullanici_id" not in st.session_state:
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = []
 
-# --- VERİTABANI (Basitleştirilmiş) ---
+# --- VERİTABANI ---
 def db_baglantisi():
     return sqlite3.connect("blazegpt.db", check_same_thread=False)
 
@@ -62,7 +62,6 @@ tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 
 # --- TTS (Sesli Okuma) JS Kodu ---
 def sesli_oku(metin):
-    # Metni güvenli hale getir
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"""
     <script>
@@ -76,7 +75,10 @@ def sesli_oku(metin):
     """
     st.components.v1.html(js, height=0)
 
-# --- BAŞLIK ---
+# --- BAŞLIK (LOGO + İSİM) ---
+col1, col2, col3 = st.columns([1, 1, 1])
+with col2:
+    st.image("logo.png", width=100)
 st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; font-size: 2.5em; margin-bottom: 0;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p style="text-align: center; color: #888;">{CEVIRI["tr"]["alt_baslik"]}</p>', unsafe_allow_html=True)
 
@@ -98,24 +100,35 @@ with st.sidebar:
         kisi = "Sen yardımcı bir asistansın. Türkçe cevap ver."
         
     st.markdown("---")
-    if st.button(CEVIRI["tr"]["disa_aktar"]):
+    
+    # Sohbeti indirme
+    if st.session_state.mesajlar:
         sohbet_metni = "".join([f"{m['role']}: {m['content']}\n\n" for m in st.session_state.mesajlar if isinstance(m['content'], str)])
-        st.download_button("Tıkla ve İndir", data=sohbet_metni, file_name="blazegpt_sohbet.txt", mime="text/plain")
+        st.download_button(
+            label=CEVIRI["tr"]["disa_aktar"], 
+            data=sohbet_metni, 
+            file_name=f"blazegpt_{datetime.now().strftime('%Y%m%d')}.txt", 
+            mime="text/plain",
+            use_container_width=True
+        )
     
     st.markdown("---")
     gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
 
 # --- SOHBET ALANI ---
+if not st.session_state.mesajlar:
+    st.info(CEVIRI["tr"]["hosgeldin"])
+
 for i, m in enumerate(st.session_state.mesajlar):
     if not isinstance(m["content"], str): continue
     
-    # Balon tasarımı
+    # Balon tasarımı (WhatsApp Tarzı)
     if m["role"] == "user":
-        st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 10px; border-radius: 10px; color: white;">{m["content"]}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 10px; border-radius: 10px; color: white; display: inline-block; max-width: 80%; text-align: left;">{m["content"]}</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div style="text-align: left; margin-bottom: 10px;"><span style="background: #262637; padding: 10px; border-radius: 10px; color: white;">{m["content"]}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: left; margin-bottom: 10px;"><span style="background: #262637; padding: 10px; border-radius: 10px; color: white; display: inline-block; max-width: 80%;">{m["content"]}</span></div>', unsafe_allow_html=True)
     
-    # Bot mesajıysa butonları göster
+    # Bot mesajıysa Dinle ve Kopyala butonları
     if m["role"] == "assistant":
         c1, c2, c3 = st.columns([1, 1, 8])
         with c1:
@@ -127,7 +140,7 @@ for i, m in enumerate(st.session_state.mesajlar):
 
 # --- DOSYA YÜKLEME VE VİZYON ---
 with st.expander("📎 Dosya / Görsel Ekle"):
-    yuklenen_resim = st.file_uploader("Görsel seç", type=["jpg", "png", "jpeg"])
+    yuklenen_resim = st.file_uploader("Görsel seç (JPG/PNG)", type=["jpg", "png", "jpeg"])
     if yuklenen_resim and st.button(CEVIRI["tr"]["vision_analiz"]):
         with st.spinner("Analiz ediliyor..."):
             img_bytes = yuklenen_resim.getvalue()
@@ -136,17 +149,19 @@ with st.expander("📎 Dosya / Görsel Ekle"):
                 cevap = client.chat.completions.create(
                     model=VISION_MODEL,
                     messages=[{"role": "user", "content": [
-                        {"type": "text", "text": "Bu görselde ne var?"},
+                        {"type": "text", "text": "Bu görselde ne var? Detaylıca analiz et."},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
                     ]}]
                 )
                 st.session_state.mesajlar.append({"role": "user", "content": "📷 [Görsel Yüklendi]"})
-                st.session_state.mesajlar.append({"role": "assistant", "content": cevap.choices[0].message.content})
+                st.session_state.mesajlar.append({"role": "assistant", "content": f"🖼️ **Analiz:**\n\n{cevap.choices[0].message.content}"})
+                kaydet_sohbet(st.session_state.mesajlar)
                 st.rerun()
             except Exception as e:
                 st.error(f"Hata: {e}")
 
-# --- MİKROFON (SESLİ GİRİŞ - TARAYICI DESTEKLİYORSA) ---
+# --- MİKROFON (SESLİ GİRİŞ) ---
+st.markdown("**🎤 Sesli Giriş (Chrome/Edge destekler):**")
 sesli_giris_js = """
 <script>
 function startDictation() {
@@ -157,16 +172,19 @@ function startDictation() {
         recognition.lang = "tr-TR";
         recognition.start();
         recognition.onresult = function(e) {
-            document.getElementById('output').value = e.results[0][0].transcript;
+            var text = e.results[0][0].transcript;
+            // Streamlit'in chat input alanına yazı yazdırmak zor olduğu için uyarı veriyoruz
+            alert("Duyduğum: " + text + "\\n\\nLütfen bu metni kopyalayıp aşağıdaki kutuya yapıştırın.");
             recognition.stop();
         };
+    } else {
+        alert("Tarayıcınız sesli girişi desteklemiyor. Lütfen Chrome kullanın.");
     }
 }
 </script>
-<input type="text" id="output" placeholder="Konuşmak için butona bas..." style="width: 100%; padding: 10px; background: #262637; color: white; border: 1px solid #4d6bfe; border-radius: 10px;">
-<button onclick="startDictation()" style="background: #4d6bfe; color: white; padding: 10px; border-radius: 10px; margin-top: 5px; width: 100%;">🎤 Mikrofonla Konuş</button>
+<button onclick="startDictation()" style="background: #4d6bfe; color: white; padding: 10px; border-radius: 10px; border: none; cursor: pointer; width: 100%;">🎤 Konuş ve Yazıya Çevir</button>
 """
-st.components.v1.html(sesli_giris_js, height=100)
+st.components.v1.html(sesli_giris_js, height=60)
 
 # --- GİRİŞ KUTUSU ---
 if soru := st.chat_input(CEVIRI["tr"]["sor"]):
@@ -174,8 +192,7 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
     
     cevap = ""
     if gorsel_modu:
-        # Görsel oluşturma (Basitleştirilmiş)
-        with st.spinner("Görsel oluşturuluyor..."):
+        with st.spinner("🎨 Görsel oluşturuluyor..."):
             url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
             r = requests.get(url, timeout=90)
             if r.status_code == 200:
@@ -184,10 +201,8 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
             else:
                 cevap = "Görsel oluşturulamadı."
     else:
-        # WEB ARAMA VEYA NORMAL SOHBET
         tam = ""
         try:
-            # Tavily ile arama yap (Eğer API key varsa)
             arama_sonucu = ""
             if tavily:
                 with st.spinner("🌐 İnternette araştırıyorum..."):
@@ -198,7 +213,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                     except:
                         pass
 
-            # AI'ya gönder
             mesajlar_gonder = [{"role": "system", "content": kisi}]
             if arama_sonucu:
                 mesajlar_gonder.append({"role": "system", "content": f"İşte internette bulduğun güncel bilgiler:\n{arama_sonucu}"})
@@ -214,7 +228,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                 tam += parca.choices[0].delta.content or ""
             cevap = tam
             
-            # Kaynakları göster
             if arama_sonucu:
                 cevap += f"\n\n{CEVIRI['tr']['kaynaklar']}\n"
                 for r in res.get("results", []):
@@ -222,6 +235,10 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                     
         except Exception as e:
             cevap = f"Hata: {e}"
+    
+    st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+    kaydet_sohbet(st.session_state.mesajlar)
+    st.rerun()
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
