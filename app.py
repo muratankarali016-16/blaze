@@ -9,48 +9,49 @@ from io import BytesIO
 import uuid
 import base64
 from pypdf import PdfReader
+import pandas as pd
 
 st.set_page_config(page_title="BlazeX - Süper Asistan", page_icon="🔥", layout="wide")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
-        "baslik": "BlazeX", "alt_baslik": "Sesli, Görsel ve Akıllı Asistan ⚡",
+        "baslik": "BlazeX", "alt_baslik": "Hafızalı, Görsel ve Sesli Asistan ⚡",
         "sohbetler": "💬 Sohbetler", "yeni_sohbet": "➕ Yeni Sohbet",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥",
+        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık seni hatırlıyorum!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "ozel_karakter": "Kendi Karakterini Yarat", "karakter_yaz": "Karakter talimatını yaz...",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
         "aydinlatma": "📜 Gizlilik",
-        "aydinlatma_metni": """
-        **Veri Sorumlusu:** BlazeX (Kişisel Kullanım)
-        Bu uygulama KVKK kapsamında verilerinizi işlemektedir. 
-        Sohbetleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
-        ⚠️ Lütfen kişisel bilgilerinizi yazmayın.
-        """,
+        "aydinlatma_metni": "Bu uygulama KVKK kapsamında verilerinizi işlemektedir. Sohbetleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır. Lütfen kişisel bilgilerinizi yazmayın.",
         "hazir_sorular": "💡 Hazır Sorular", "gecmis": "📚 Geçmiş Sohbetler",
-        "pdf_oku": "📄 PDF Yükle ve Oku", "otomatik_ses": "🔊 Otomatik Sesli Okuma"
+        "pdf_oku": "📄 PDF Yükle", "otomatik_ses": "🔊 Otomatik Sesli Okuma",
+        "kamera": "📸 Kamera ile Fotoğraf Çek", "hafiza": "🧠 Yapay Zeka Hafızası",
+        "rol_yapma": "🗣️ Sesli Rol Yapma (Mülakat/İngilizce)", "ceviri_modu": "🌍 Gerçek Zamanlı Çeviri",
+        "veri_analizi": "📊 Excel/CSV Analizi"
     }
 }
 
 KISILIKLER = {
-    "Normal": "Sen BlazeX adında samimi ve yardımcı bir asistansın. Türkçe cevap ver. Eğer kullanıcının yazdığı metin üzgün veya kızgın bir tondaysa, ona göre daha sakin ve empatik bir yanıt ver. Robotik olma.",
+    "Normal": "Sen BlazeX adında samimi ve yardımcı bir asistansın. Türkçe cevap ver. Robotik olma.",
     "Öğretmen": "Sen sabırlı bir öğretmensin. Türkçe cevap ver.",
-    "Kod Ustası": "Sen uzman bir yazılımcısın. Türkçe cevap ver. Kod bloklarını ```python ... ``` şeklinde yaz."
+    "Kod Ustası": "Sen uzman bir yazılımcısın. Türkçe cevap ver. Kod bloklarını ```python ... ``` şeklinde yaz.",
+    "Mülakatçı": "Sen bir İK uzmanısın. Kullanıcıya iş mülakatı soruları soruyorsun. Cevaplarını değerlendir ve geri bildirim ver.",
+    "İngilizce Öğretmeni": "You are an English teacher. You must talk to the user in English to help them practice. Correct their mistakes politely."
 }
 
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
 
-# --- SESSION STATE ---
+# --- SESSION STATE & HAFIZA ---
 if "kullanici_id" not in st.session_state:
     st.session_state.kullanici_id = str(uuid.uuid4())[:8]
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = []
-if "otomatik_ses" not in st.session_state:
-    st.session_state.otomatik_ses = False
+if "hafiza" not in st.session_state:
+    st.session_state.hafiza = ""
 
 # --- VERİTABANI ---
 def db_baglantisi():
@@ -97,8 +98,8 @@ def pdf_metin_cikar(dosya):
         metin = ""
         for sayfa in reader.pages:
             metin += sayfa.extract_text() + "\n"
-        return metin[:5000] # Limitli okuyalım
-    except Exception as e:
+        return metin[:5000]
+    except Exception:
         return None
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -114,7 +115,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- TTS (Sesli Okuma) ---
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = 'tr-TR'; window.speechSynthesis.speak(msg);</script>"
@@ -132,7 +132,7 @@ with st.sidebar:
     st.markdown(f"## {CEVIRI['tr']['ayarlar']}")
     model = st.selectbox(CEVIRI["tr"]["model"], MODELLER, index=0) 
     
-    kisi_secim = st.selectbox(CEVIRI["tr"]["kisilik"], ["Normal", "Öğretmen", "Kod Ustası", "Özel Karakter"])
+    kisi_secim = st.selectbox(CEVIRI["tr"]["kisilik"], list(KISILIKLER.keys()) + ["Özel Karakter"])
     
     if kisi_secim == "Özel Karakter":
         ozel_kisi = st.text_area(CEVIRI["tr"]["karakter_yaz"], "Sen yardımcı bir asistansın.")
@@ -142,7 +142,14 @@ with st.sidebar:
         
     st.markdown("---")
     
-    # 1. PDF YÜKLEME
+    # YENİ ÖZELLİK: HAFIZA SİSTEMİ
+    with st.expander(CEVIRI["tr"]["hafiza"]):
+        hafiza_input = st.text_area("Benim hakkımda ne bilmelisin? (Örn: Adım Murat, yazılımcıyım, kahveyi severim)", value=st.session_state.hafiza)
+        if st.button("🧠 Hafızaya Kaydet"):
+            st.session_state.hafiza = hafiza_input
+            st.success("Hafıza güncellendi! Artık seni tanıyorum.")
+
+    # PDF YÜKLEME
     with st.expander(CEVIRI["tr"]["pdf_oku"]):
         pdf_file = st.file_uploader("PDF Seç", type=["pdf"])
         if pdf_file:
@@ -154,20 +161,32 @@ with st.sidebar:
                         st.success("PDF yüklendi, sorunuzu sorun!")
                     else:
                         st.error("PDF okunamadı.")
-    
-    # 2. HAZIR SORULAR
+                        
+    # YENİ ÖZELLİK: EXCEL/CSV ANALİZİ
+    with st.expander(CEVIRI["tr"]["veri_analizi"]):
+        data_file = st.file_uploader("CSV veya Excel Yükle", type=["csv", "xlsx"])
+        if data_file:
+            try:
+                if data_file.name.endswith('.csv'):
+                    df = pd.read_csv(data_file)
+                else:
+                    df = pd.read_excel(data_file)
+                st.write("Veri Önizlemesi:")
+                st.dataframe(df.head(3))
+                if st.button("📊 Bu Veriyi Analiz Et"):
+                    ozet = df.describe().to_string()
+                    st.session_state.mesajlar.append({"role": "user", "content": f"İşte veri setimin özeti:\n{ozet}\n\nBu veri hakkında ne gibi içgörüler çıkarabilirsin?"})
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Dosya okunamadı: {e}")
+
+    # HAZIR SORULAR
     with st.expander(CEVIRI["tr"]["hazir_sorular"]):
         if st.button("💡 Bana bir iş fikri ver"):
             st.session_state.mesajlar.append({"role": "user", "content": "Bana yenilikçi bir iş fikri ver."})
             st.rerun()
-        if st.button("📝 İngilizceye Çevir"):
-            st.session_state.mesajlar.append({"role": "user", "content": "Şu metni İngilizceye çevir: 'Merhaba dünya'"})
-            st.rerun()
-        if st.button("😂 Beni güldür"):
-            st.session_state.mesajlar.append({"role": "user", "content": "Bana kısa ve komik bir fıkra anlat."})
-            st.rerun()
 
-    # 3. GEÇMİŞ SOHBETLER
+    # GEÇMİŞ SOHBETLER
     with st.expander(CEVIRI["tr"]["gecmis"]):
         gecmis = gecmis_sohbetleri_getir()
         if gecmis:
@@ -180,9 +199,7 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 4. OTOMATİK SES
     st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
-    
     gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
     web_arama_modu = st.toggle("🌐 İnternette Ara", value=False)
     
@@ -196,15 +213,12 @@ if not st.session_state.mesajlar:
 for i, m in enumerate(st.session_state.mesajlar):
     if not isinstance(m["content"], str): continue
     
-    # WhatsApp Tarzı Balonlar ve Markdown Desteği
     if m["role"] == "user":
         st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 12px; border-radius: 15px; color: white; display: inline-block; max-width: 80%;">{m["content"]}</span></div>', unsafe_allow_html=True)
     else:
-        # Bot mesajlarını markdown olarak göster (kodları renklendirmek için)
         with st.chat_message("assistant", avatar="🔥"):
             st.markdown(m["content"])
             
-        # Sesli okuma ve kopyalama butonları
         c1, c2, c3 = st.columns([1, 1, 8])
         with c1:
             if st.button(CEVIRI["tr"]["sesli_dinle"], key=f"tts_{i}"):
@@ -213,16 +227,15 @@ for i, m in enumerate(st.session_state.mesajlar):
             if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"):
                 st.code(m["content"])
 
-# --- DOSYA YÜKLEME (GÖRSEL) ---
-with st.expander("📎 Görsel Ekle"):
-    yuklenen_resim = st.file_uploader("Görsel seç", type=["jpg", "png", "jpeg"])
-    if yuklenen_resim and st.button(CEVIRI["tr"]["vision_analiz"]):
+# --- KAMERA DESTEĞİ ---
+with st.expander(CEVIRI["tr"]["kamera"]):
+    foto = st.camera_input("Fotoğraf Çek")
+    if foto and st.button("📸 Fotoğrafı Analiz Et", key="cam_analiz"):
         with st.spinner("Analiz ediliyor..."):
-            img_bytes = yuklenen_resim.getvalue()
-            b64 = base64.b64encode(img_bytes).decode('utf-8')
+            b64 = base64.b64encode(foto.getvalue()).decode('utf-8')
             try:
-                cevap = client.chat.completions.create(model=VISION_MODEL, messages=[{"role": "user", "content": [{"type": "text", "text": "Bu görselde ne var?"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}])
-                st.session_state.mesajlar.append({"role": "user", "content": "📷 [Görsel Yüklendi]"})
+                cevap = client.chat.completions.create(model=VISION_MODEL, messages=[{"role": "user", "content": [{"type": "text", "text": "Bu fotoğrafta ne var?"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}])
+                st.session_state.mesajlar.append({"role": "user", "content": "📸 [Kamera Fotoğrafı Çekildi]"})
                 st.session_state.mesajlar.append({"role": "assistant", "content": f"🖼️ **Analiz:**\n\n{cevap.choices[0].message.content}"})
                 kaydet_sohbet(st.session_state.mesajlar)
                 st.rerun()
@@ -266,6 +279,11 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                     except: pass
 
             mesajlar_gonder = [{"role": "system", "content": kisi}]
+            
+            # HAFIZA SİSTEMİNİ PROMPTA EKLE
+            if st.session_state.hafiza:
+                mesajlar_gonder.append({"role": "system", "content": f"Kullanıcı hakkında bilmen gerekenler: {st.session_state.hafiza}"})
+                
             if arama_sonucu:
                 mesajlar_gonder.append({"role": "system", "content": f"İşte güncel bilgiler:\n{arama_sonucu}"})
             
@@ -289,7 +307,7 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         except Exception as e:
             hata_mesaji = str(e)
             if "429" in hata_mesaji or "rate limit" in hata_mesaji.lower():
-                st.error("⏳ **API Limitine Takıldık!** Groq'un ücretsiz limiti doldu. Lütfen 1 dakika bekleyip tekrar deneyin.")
+                st.error("⏳ **API Limitine Takıldık!** Lütfen 1 dakika bekleyip tekrar deneyin.")
                 cevap = "Sistem şu an yoğun, lütfen birazdan tekrar deneyin."
             else:
                 st.error(f"⚠️ Beklenmeyen bir hata oluştu: {e}")
@@ -298,7 +316,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
     
-    # Otomatik Sesli Okuma (Eğer açıksa)
     if st.session_state.otomatik_ses and cevap != "Bir hata oluştu.":
         sesli_oku(cevap)
         
