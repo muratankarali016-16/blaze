@@ -98,7 +98,6 @@ if st.session_state.sayfa == "anasayfa":
     st.markdown("<p style='text-align: center; font-size: 1.2em;'>Geleceğin Yapay Zeka Asistanı</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # KULLANICI ADI SORMA EKRANI
     misafir_adi = st.text_input("Sana ne diyeyim? (Örn: Murat)", key="isim_input", placeholder="İsmini yaz...")
     
     if st.button("🚀 Hemen Başla", use_container_width=True, type="primary"):
@@ -112,7 +111,7 @@ if st.session_state.sayfa == "uygulama":
         st.markdown(f"### 👤 {st.session_state.kullanici_id}")
         if st.button("🚪 Ana Sayfa"): 
             st.session_state.sayfa = "anasayfa"
-            st.session_state.mesajlar = [] # Sohbeti sıfırla
+            st.session_state.mesajlar = []
             st.rerun()
         st.markdown("---")
         
@@ -158,9 +157,23 @@ if st.session_state.sayfa == "uygulama":
         st.markdown("---")
         st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
 
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2: st.image("logo.png", width=80)
-    st.markdown(f'<h1 style="text-align: center; color: #4d6bfe;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
+    # --- LOGO TAM ORTALAMA (CSS İLE) ---
+    try:
+        with open("logo.png", "rb") as f:
+            logo_base64 = base64.b64encode(f.read()).decode()
+            
+        st.markdown(
+            f"""
+            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 10px; margin-top: 20px;">
+                <img src="data:image/png;base64,{logo_base64}" width="120" style="border-radius: 15px; box-shadow: 0 4px 15px rgba(77, 107, 254, 0.3);">
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+    except:
+        st.warning("Logo dosyası (logo.png) bulunamadı.")
+        
+    st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; margin-top: 0;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
     
     if not st.session_state.mesajlar: st.info(CEVIRI["tr"]["hosgeldin"])
 
@@ -219,7 +232,7 @@ if st.session_state.sayfa == "uygulama":
                         temperature=0.6
                     )
                     
-                    tam_metin = [] # Hata vermemesi için listeye çevirdik
+                    tam_metin = [] 
                     def stream_uretici():
                         for parca in stream:
                             icerik = parca.choices[0].delta.content or ""
