@@ -20,7 +20,7 @@ CEVIRI = {
     "tr": {
         "baslik": "BlazeX", "alt_baslik": "Sohbet, Oyun, Finans ve Daha Fazlası ⚡",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥 Benimle sohbet edebilir, oyun oynayabilir, kod yazdırabilir ve finansal verileri takip edebilirsin!",
+        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık ne zaman internete bakmam gerektiğine kendim karar veriyorum!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
@@ -64,38 +64,46 @@ def db_olustur():
     db_baglantisi().commit()
 db_olustur()
 
-def sifre_hashle(sifre):
-    return hashlib.sha256(sifre.encode()).hexdigest()
-
+def sifre_hashle(sifre): return hashlib.sha256(sifre.encode()).hexdigest()
 def kayit_ol(kullanici_adi, sifre):
     try:
         c = db_baglantisi().cursor()
         c.execute("INSERT INTO kullanicilar (kullanici_adi, sifre) VALUES (?, ?)", (kullanici_adi, sifre_hashle(sifre)))
         db_baglantisi().commit()
         return True
-    except sqlite3.IntegrityError:
-        return False
+    except sqlite3.IntegrityError: return False
 
 def giris_yap(kullanici_adi, sifre):
     c = db_baglantisi().cursor()
     c.execute("SELECT sifre FROM kullanicilar WHERE kullanici_adi = ?", (kullanici_adi,))
     res = c.fetchone()
-    if res and res[0] == sifre_hashle(sifre):
-        return True
-    return False
+    return res and res[0] == sifre_hashle(sifre)
 
 def kaydet_sohbet(mesajlar, k_id):
     baslik = "Sohbet"
     for m in mesajlar:
         if m["role"] == "user" and isinstance(m["content"], str):
-            baslik = m["content"][:30]
-            break
+            baslik = m["content"][:30]; break
     c = db_baglantisi().cursor()
     c.execute("INSERT INTO sohbetler (kullanici_id, baslik, mesajlar) VALUES (?, ?, ?)", (k_id, baslik, json.dumps(mesajlar, ensure_ascii=False)))
     db_baglantisi().commit()
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
+
+# --- NİYET ANALİZİ ---
+def niyet_analizi_yap(soru):
+    try:
+        cevap = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {"role": "system", "content": "Sen bir niyet analizi asistanısın. Kullanıcının sorusu güncel bir bilgi (hava durumu, haber, maç skoru, fiyat vb.) gerektiriyorsa sadece 'ARA' yaz. Eğer genel kültür, kod yazma, sohbet, şiir gibi internet gerektirmeyen bir konuysa sadece 'ARAMA' yaz. Başka hiçbir şey yazma."},
+                {"role": "user", "content": soru}
+            ],
+            max_tokens=5, temperature=0.0
+        )
+        return "ARA" in cevap.choices[0].message.content.strip().upper()
+    except: return False
 
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
@@ -109,7 +117,6 @@ if not st.session_state.onay_verildi:
     if st.button("✅ Kabul Ediyorum", type="primary"): st.session_state.onay_verildi = True; st.rerun()
     st.stop()
 
-# 1. LANDING PAGE (Giriş Ekranı)
 if st.session_state.sayfa == "anasayfa":
     st.markdown("<h1 style='text-align: center; color: #4d6bfe; font-size: 4em;'>🔥 BlazeX</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-size: 1.2em;'>Geleceğin Yapay Zeka Asistanı</p>", unsafe_allow_html=True)
@@ -128,7 +135,6 @@ if st.session_state.sayfa == "anasayfa":
             st.session_state.sayfa = "giris"; st.rerun()
     st.stop()
 
-# 2. GİRİŞ / KAYIT SAYFASI
 if st.session_state.sayfa == "giris":
     st.markdown("<h2 style='text-align: center;'>👤 Hesap İşlemleri</h2>", unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["Giriş Yap", "Kayıt Ol"])
@@ -137,30 +143,24 @@ if st.session_state.sayfa == "giris":
         sifre = st.text_input("Şifre", type="password", key="giris_sifre")
         if st.button("Giriş Yap"):
             if giris_yap(k_adi, sifre):
-                st.session_state.giris_yapildi = True
-                st.session_state.kullanici_adi = k_adi
-                st.session_state.sayfa = "uygulama"
-                st.rerun()
+                st.session_state.giris_yapildi = True; st.session_state.kullanici_adi = k_adi; st.session_state.sayfa = "uygulama"; st.rerun()
             else: st.error("Hatalı giriş!")
     with tab2:
         y_kadi = st.text_input("Yeni Kullanıcı Adı", key="kayit_kadi")
         y_sifre = st.text_input("Yeni Şifre", type="password", key="kayit_sifre")
         if st.button("Kayıt Ol"):
-            if kayit_ol(y_kadi, y_sifre):
-                st.success("Kayıt başarılı! Giriş yapabilirsiniz.")
-            else: st.error("Bu kullanıcı adı zaten alınmış.")
+            if kayit_ol(y_kadi, y_sifre): st.success("Kayıt başarılı!")
+            else: st.error("Bu kullanıcı adı alınmış.")
     if st.button("⬅️ Ana Sayfaya Dön"): st.session_state.sayfa = "anasayfa"; st.rerun()
     st.stop()
 
-# 3. UYGULAMA (SOHBET EKRANI)
 if st.session_state.sayfa == "uygulama":
-    # --- KENAR ÇUBUĞU ---
     with st.sidebar:
         st.markdown(f"### 👤 {st.session_state.kullanici_adi}")
         if st.button("🚪 Çıkış / Ana Sayfa"): st.session_state.sayfa = "anasayfa"; st.rerun()
         st.markdown("---")
         
-        if st.session_state.kullanici_adi == "ADMIN": # Sadece admin
+        if st.session_state.kullanici_adi == "ADMIN":
             with st.expander("👑 Admin Paneli"):
                 c = db_baglantisi().cursor()
                 c.execute("SELECT COUNT(*) FROM sohbetler"); st.metric("Toplam Sohbet", c.fetchone()[0])
@@ -180,8 +180,7 @@ if st.session_state.sayfa == "uygulama":
             sembol = st.text_input("Sembol (Örn: BTC-USD, THYAO.IS)")
             if st.button("Fiyat Getir"):
                 try:
-                    hisse = yf.Ticker(sembol)
-                    veri = hisse.history(period="1d")
+                    hisse = yf.Ticker(sembol); veri = hisse.history(period="1d")
                     if not veri.empty: st.success(f"**{sembol}**: {veri['Close'].iloc[-1]:.2f}")
                 except: st.error("Bulunamadı.")
 
@@ -202,9 +201,7 @@ if st.session_state.sayfa == "uygulama":
         st.markdown("---")
         st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
         gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
-        web_arama_modu = st.toggle("🌐 İnternette Ara", value=False)
 
-    # --- SOHBET ALANI ---
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2: st.image("logo.png", width=80)
     st.markdown(f'<h1 style="text-align: center; color: #4d6bfe;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
@@ -223,7 +220,6 @@ if st.session_state.sayfa == "uygulama":
             with c2:
                 if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"): st.code(m["content"])
 
-    # --- GİRİŞ KUTUSU ---
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         cevap = ""
@@ -241,7 +237,12 @@ if st.session_state.sayfa == "uygulama":
             tam = ""
             try:
                 arama_sonucu = ""
-                if web_arama_modu and tavily:
+                
+                # Niyet Analizi Çağrısı
+                internet_gerekli = niyet_analizi_yap(soru) 
+                
+                if internet_gerekli and tavily:
+                    st.toast("🌐 Güncel bilgi gerektiği için internette araştırıyorum...")
                     with st.spinner("🌐 Araştırılıyor..."):
                         try:
                             res = tavily.search(query=soru, max_results=2)
@@ -267,10 +268,7 @@ if st.session_state.sayfa == "uygulama":
                 cevap = "Bir hata oluştu."
         
         st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-        
-        # Sadece kayıtlı kullanıcıların sohbeti kaydedilir
         if st.session_state.kullanici_adi != "Misafir":
             kaydet_sohbet(st.session_state.mesajlar, st.session_state.kullanici_adi)
-        
         if st.session_state.otomatik_ses and cevap != "Bir hata oluştu.": sesli_oku(cevap)
         st.rerun()
