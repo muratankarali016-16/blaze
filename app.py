@@ -20,7 +20,7 @@ CEVIRI = {
     "tr": {
         "baslik": "BlazeX", "alt_baslik": "Sohbet, Oyun, Finans ve Daha Fazlası ⚡",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "gorsel_modu": "🎨 Görsel Oluşturma", "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık ne zaman internete bakmam gerektiğine kendim karar veriyorum!",
+        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık resim çizmemi mi istiyorsun yoksa internete bakmamı mı, kendim karar veriyorum!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
@@ -42,7 +42,6 @@ KISILIKLER = {
 
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
-ADMIN_SIFRE = "admin123" # BURAYI KENDİ ŞİFRENLE DEĞİŞTİR!
 
 # --- SESSION STATE ---
 if "kullanici_id" not in st.session_state: st.session_state.kullanici_id = str(uuid.uuid4())[:8]
@@ -91,19 +90,22 @@ def kaydet_sohbet(mesajlar, k_id):
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 
-# --- NİYET ANALİZİ ---
+# --- NİYET ANALİZİ (Görsel + Arama) ---
 def niyet_analizi_yap(soru):
     try:
         cevap = client.chat.completions.create(
             model="openai/gpt-oss-20b",
             messages=[
-                {"role": "system", "content": "Sen bir niyet analizi asistanısın. Kullanıcının sorusu güncel bir bilgi (hava durumu, haber, maç skoru, fiyat vb.) gerektiriyorsa sadece 'ARA' yaz. Eğer genel kültür, kod yazma, sohbet, şiir gibi internet gerektirmeyen bir konuysa sadece 'ARAMA' yaz. Başka hiçbir şey yazma."},
+                {"role": "system", "content": "Sen bir niyet analizi asistanısın. Kullanıcının sorusunu analiz et ve SADECE şu üç kelimeden birini yaz:\n1. Eğer kullanıcı resim çizmeni/görsel oluşturmanı istiyorsa 'GORSEL' yaz.\n2. Eğer güncel bir bilgi (hava durumu, haber, maç skoru, fiyat) soruyorsa 'ARAMA' yaz.\n3. Eğer normal bir sohbet, kod yazma, matematik veya genel kültür sorusuysa 'NORMAL' yaz.\nBaşka hiçbir açıklama yapma."},
                 {"role": "user", "content": soru}
             ],
             max_tokens=5, temperature=0.0
         )
-        return "ARA" in cevap.choices[0].message.content.strip().upper()
-    except: return False
+        karar = cevap.choices[0].message.content.strip().upper()
+        if "GORSEL" in karar: return "GORSEL"
+        if "ARAMA" in karar: return "ARAMA"
+        return "NORMAL"
+    except: return "NORMAL"
 
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
@@ -160,12 +162,6 @@ if st.session_state.sayfa == "uygulama":
         if st.button("🚪 Çıkış / Ana Sayfa"): st.session_state.sayfa = "anasayfa"; st.rerun()
         st.markdown("---")
         
-        if st.session_state.kullanici_adi == "ADMIN":
-            with st.expander("👑 Admin Paneli"):
-                c = db_baglantisi().cursor()
-                c.execute("SELECT COUNT(*) FROM sohbetler"); st.metric("Toplam Sohbet", c.fetchone()[0])
-                c.execute("SELECT COUNT(*) FROM kullanicilar"); st.metric("Toplam Kullanıcı", c.fetchone()[0])
-
         model = st.selectbox(CEVIRI["tr"]["model"], MODELLER, index=0) 
         kisi_secim = st.selectbox(CEVIRI["tr"]["kisilik"], list(KISILIKLER.keys()))
         kisi = KISILIKLER[kisi_secim]
@@ -200,7 +196,6 @@ if st.session_state.sayfa == "uygulama":
 
         st.markdown("---")
         st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
-        gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2: st.image("logo.png", width=80)
@@ -223,25 +218,28 @@ if st.session_state.sayfa == "uygulama":
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         cevap = ""
-        if gorsel_modu:
+        
+        # --- NİYET ANALİZİ ---
+        niyet = niyet_analizi_yap(soru)
+        
+        # 1. DURUM: GÖRSEL OLUŞTURMA
+        if niyet == "GORSEL":
             with st.spinner("🎨 Görsel oluşturuluyor..."):
                 try:
                     url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
                     r = requests.get(url, timeout=90)
                     if r.status_code == 200:
                         st.image(BytesIO(r.content), use_container_width=True)
-                        cevap = f"🖼️ Görsel oluşturuldu: {soru}"
+                        cevap = f"🖼️ İstediğin görseli oluşturdum: {soru}"
                     else: cevap = "Görsel oluşturulamadı."
                 except Exception as e: cevap = f"Görsel hatası: {e}"
+                    
+        # 2. DURUM: İNTERNET ARAMASI veya NORMAL SOHBET
         else:
             tam = ""
             try:
                 arama_sonucu = ""
-                
-                # Niyet Analizi Çağrısı
-                internet_gerekli = niyet_analizi_yap(soru) 
-                
-                if internet_gerekli and tavily:
+                if niyet == "ARAMA" and tavily:
                     st.toast("🌐 Güncel bilgi gerektiği için internette araştırıyorum...")
                     with st.spinner("🌐 Araştırılıyor..."):
                         try:
