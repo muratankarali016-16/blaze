@@ -25,10 +25,19 @@ CEVIRI = {
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
         "aydinlatma": "📜 Gizlilik",
-        "aydinlatma_metni": "Bu uygulama KVKK kapsamında verilerinizi işlemektedir. Sohbetleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır. Lütfen kişisel bilgilerinizi yazmayın.",
+        "aydinlatma_metni": """
+        **Veri Sorumlusu:** BlazeX (Kişisel Kullanım)
+        Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir. 
+        - **İşlenen Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
+        - **Aktarım:** Hizmet için sohbet içerikleri Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
+        - **Haklarınız:** Verilerinizin silinmesini talep etme hakkına sahipsiniz.
+        
+        ⚠️ **GÜVENLİK UYARISI:** Lütfen bu sisteme özel bilgilerinizi, ileri düzey kurumsal bilgilerinizi ve kişisel bilgilerinizi (TC Kimlik No, şifre vb.) yazmayın.
+        ⏳ **API LİMİTİ:** Günlük kullanım limiti 1.000 istektir. Limit dolarsa yarın tekrar deneyin.
+        """,
         "hazir_sorular": "💡 Hazır Sorular", "gecmis": "📚 Geçmiş Sohbetler",
         "pdf_oku": "📄 PDF Yükle", "otomatik_ses": "🔊 Otomatik Sesli Okuma",
-        "kamera": "📸 Kamera ile Fotoğraf Çek", "hafiza": "🧠 Yapay Zeka Hafızası",
+        "kamera": "📸 Kamera", "hafiza": "🧠 Yapay Zeka Hafızası",
         "veri_analizi": "📊 Excel/CSV Analizi"
     }
 }
@@ -53,6 +62,8 @@ if "hafiza" not in st.session_state:
     st.session_state.hafiza = ""
 if "otomatik_ses" not in st.session_state:
     st.session_state.otomatik_ses = False
+if "onay_verildi" not in st.session_state:
+    st.session_state.onay_verildi = False
 
 # --- VERİTABANI ---
 def db_baglantisi():
@@ -128,6 +139,26 @@ with col2:
 st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; font-size: 2.5em; margin-bottom: 0; text-shadow: 0 0 20px #4d6bfe;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p style="text-align: center; color: #a0a0b0;">{CEVIRI["tr"]["alt_baslik"]}</p>', unsafe_allow_html=True)
 
+# --- İLK GİRİŞ AYDINLATMA ONAY EKRANI ---
+if not st.session_state.onay_verildi:
+    st.markdown("---")
+    st.warning("⚠️ **Devam etmek için lütfen aydınlatma metnini okuyup kabul edin.**")
+    
+    with st.container(border=True):
+        st.markdown("### 📜 Gizlilik ve Aydınlatma Metni")
+        st.write(CEVIRI["tr"]["aydinlatma_metni"])
+        
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✅ Kabul Ediyorum", use_container_width=True, type="primary"):
+            st.session_state.onay_verildi = True
+            st.rerun()
+    with col2:
+        if st.button("❌ Reddediyorum", use_container_width=True):
+            st.error("Sistemi kullanabilmek için aydınlatma metnini kabul etmeniz gerekmektedir. Sayfayı kapatabilirsiniz.")
+            
+    st.stop() # Kullanıcı kabul edene kadar aşağıdaki kodu çalıştırma!
+
 # --- KENAR ÇUBUĞU ---
 with st.sidebar:
     st.markdown(f"## {CEVIRI['tr']['ayarlar']}")
@@ -198,9 +229,6 @@ with st.sidebar:
     st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
     gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
     web_arama_modu = st.toggle("🌐 İnternette Ara", value=False)
-    
-    with st.expander(CEVIRI["tr"]["aydinlatma"]):
-        st.write(CEVIRI["tr"]["aydinlatma_metni"])
 
 # --- SOHBET ALANI ---
 if not st.session_state.mesajlar:
