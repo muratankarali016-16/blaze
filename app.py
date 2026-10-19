@@ -12,13 +12,22 @@ from pypdf import PdfReader
 import pandas as pd
 import yfinance as yf
 import hashlib
+import streamlit.components.v1 as components
 
-st.set_page_config(page_title="BlazeX - Mega Asistan", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="BlazeX - Ultimate Asistan", page_icon="🔥", layout="wide")
+
+# --- PWA (Mobil Uygulama) DESTEĞİ ---
+# Bu HTML kodu, tarayıcıya "bu bir uygulama" sinyali gönderir.
+st.markdown("""
+    <head>
+        <link rel="manifest" href="data:application/manifest+json,{'name':'BlazeX','short_name':'BlazeX','start_url':'/','display':'standalone','background_color':'#1e1e2e','theme_color':'#4d6bfe','icons':[{'src':'https://cdn-icons-png.flaticon.com/512/2534/2534375.png','sizes':'512x512','type':'image/png'}]}">
+    </head>
+""", unsafe_allow_html=True)
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
-        "baslik": "BlazeX", "alt_baslik": "Sohbet, Oyun, Finans ve Daha Fazlası ⚡",
+        "baslik": "BlazeX", "alt_baslik": "Sesli, Oyunlu ve Akıllı Asistan ⚡",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
         "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık bir dedektif, bir yazar, bir mimar ve bir finans uzmanıyım!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
@@ -29,7 +38,8 @@ CEVIRI = {
         "kamera": "📸 Kamera", "hafiza": "🧠 Yapay Zeka Hafızası", "veri_analizi": "📊 Excel/CSV",
         "oyun_modu": "🎮 Oyun Modu", "kod_calistirici": "💻 Kod Çalıştırıcı", "finans": "📈 Canlı Finans",
         "dedektif": "🕵️ Dedektif", "mimar": "🎨 Mimar", "rutin": "⚡ Rutin Planlayıcı",
-        "pdf_ses": "📚 PDF Seslendirici", "web_tasarim": "🌐 Web Üretici", "muzik": "🎵 Müzik"
+        "pdf_ses": "📚 PDF Seslendirici", "web_tasarim": "🌐 Web Üretici", "muzik": "🎵 Müzik",
+        "akil_oyunu": "🧩 AI Akıl Oyunu Üret", "ekip_modu": "🤝 Ekip Modu (Premium)"
     }
 }
 
@@ -102,7 +112,7 @@ tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = 'tr-TR'; window.speechSynthesis.speak(msg);</script>"
-    st.components.v1.html(js, height=0)
+    components.html(js, height=0)
 
 # --- SAYFA YÖNLENDİRME ---
 if not st.session_state.onay_verildi:
@@ -160,11 +170,36 @@ if st.session_state.sayfa == "uygulama":
             
         st.markdown("---")
         
+        # EKİP MODU (Sadece Hesabı Olanlar İçin)
+        if st.session_state.kullanici_adi != "Misafir":
+            with st.expander(CEVIRI["tr"]["ekip_modu"]):
+                st.success("Ekip Modu Aktif!")
+                st.info("Sohbetleriniz kalıcı olarak kaydediliyor ve geçmişe erişebiliyorsunuz.")
+                
+                # Geçmiş sohbetleri listele
+                c = db_baglantisi().cursor()
+                c.execute("SELECT id, baslik FROM sohbetler WHERE kullanici_id = ? ORDER BY id DESC LIMIT 5", (st.session_state.kullanici_adi,))
+                gecmis = c.fetchall()
+                if gecmis:
+                    for sid, baslik in gecmis:
+                        if st.button(f"💬 {baslik}", key=f"gecmis_{sid}"):
+                            c.execute("SELECT mesajlar FROM sohbetler WHERE id = ?", (sid,))
+                            res = c.fetchone()
+                            if res: st.session_state.mesajlar = json.loads(res[0]); st.rerun()
+        else:
+            st.info("💡 Geçmiş sohbetleri kaydetmek için giriş yapın.")
+
         # DEDEKTİF MODU
         with st.expander(CEVIRI["tr"]["dedektif"]):
             metin = st.text_area("Analiz edilecek metni girin:")
             if st.button("🕵️ Gizli Anlamı Çöz"):
                 st.session_state.mesajlar.append({"role": "user", "content": f"Bu metni bir dedektif gibi analiz et ve gizli anlamları bul:\n{metin}"})
+                st.rerun()
+
+        # AKIL OYUNU
+        with st.expander(CEVIRI["tr"]["akil_oyunu"]):
+            if st.button("🧩 Bulmaca Üret"):
+                st.session_state.mesajlar.append({"role": "user", "content": "Bana çözmem için zor bir mantık bulmacası üret ve cevabımı bekle."})
                 st.rerun()
 
         # MİMAR
@@ -245,21 +280,30 @@ if st.session_state.sayfa == "uygulama":
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         cevap = ""
-        if gorsel_modu:
+        
+        # NİYET ANALİZİ (Görsel / Arama / Normal)
+        niyet = "NORMAL" # Basitleştirilmiş varsayılan
+        if "çiz" in soru.lower() or "resim" in soru.lower() or "görsel" in soru.lower():
+            niyet = "GORSEL"
+        elif "hava" in soru.lower() or "haber" in soru.lower() or "fiyat" in soru.lower() or "maç" in soru.lower():
+            niyet = "ARAMA"
+
+        if niyet == "GORSEL":
             with st.spinner("🎨 Görsel oluşturuluyor..."):
                 try:
                     url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
                     r = requests.get(url, timeout=90)
                     if r.status_code == 200:
                         st.image(BytesIO(r.content), use_container_width=True)
-                        cevap = f"🖼️ Görsel oluşturuldu: {soru}"
+                        cevap = f"🖼️ İstediğin görseli oluşturdum: {soru}"
                     else: cevap = "Görsel oluşturulamadı."
                 except Exception as e: cevap = f"Görsel hatası: {e}"
         else:
             tam = ""
             try:
                 arama_sonucu = ""
-                if web_arama_modu and tavily:
+                if niyet == "ARAMA" and tavily:
+                    st.toast("🌐 Güncel bilgi gerektiği için internette araştırıyorum...")
                     with st.spinner("🌐 Araştırılıyor..."):
                         try:
                             res = tavily.search(query=soru, max_results=2)
@@ -285,7 +329,10 @@ if st.session_state.sayfa == "uygulama":
                 cevap = "Bir hata oluştu."
         
         st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
+        
+        # Sadece kayıtlı kullanıcıların sohbeti kaydedilir
         if st.session_state.kullanici_adi != "Misafir":
             kaydet_sohbet(st.session_state.mesajlar, st.session_state.kullanici_adi)
+            
         if st.session_state.otomatik_ses and cevap != "Bir hata oluştu.": sesli_oku(cevap)
         st.rerun()
