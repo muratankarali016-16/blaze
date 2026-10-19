@@ -29,7 +29,6 @@ CEVIRI = {
         "hazir_sorular": "💡 Hazır Sorular", "gecmis": "📚 Geçmiş Sohbetler",
         "pdf_oku": "📄 PDF Yükle", "otomatik_ses": "🔊 Otomatik Sesli Okuma",
         "kamera": "📸 Kamera ile Fotoğraf Çek", "hafiza": "🧠 Yapay Zeka Hafızası",
-        "rol_yapma": "🗣️ Sesli Rol Yapma (Mülakat/İngilizce)", "ceviri_modu": "🌍 Gerçek Zamanlı Çeviri",
         "veri_analizi": "📊 Excel/CSV Analizi"
     }
 }
@@ -52,6 +51,8 @@ if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = []
 if "hafiza" not in st.session_state:
     st.session_state.hafiza = ""
+if "otomatik_ses" not in st.session_state:
+    st.session_state.otomatik_ses = False
 
 # --- VERİTABANI ---
 def db_baglantisi():
@@ -142,14 +143,12 @@ with st.sidebar:
         
     st.markdown("---")
     
-    # YENİ ÖZELLİK: HAFIZA SİSTEMİ
     with st.expander(CEVIRI["tr"]["hafiza"]):
-        hafiza_input = st.text_area("Benim hakkımda ne bilmelisin? (Örn: Adım Murat, yazılımcıyım, kahveyi severim)", value=st.session_state.hafiza)
+        hafiza_input = st.text_area("Benim hakkımda ne bilmelisin?", value=st.session_state.hafiza)
         if st.button("🧠 Hafızaya Kaydet"):
             st.session_state.hafiza = hafiza_input
-            st.success("Hafıza güncellendi! Artık seni tanıyorum.")
+            st.success("Hafıza güncellendi!")
 
-    # PDF YÜKLEME
     with st.expander(CEVIRI["tr"]["pdf_oku"]):
         pdf_file = st.file_uploader("PDF Seç", type=["pdf"])
         if pdf_file:
@@ -162,7 +161,6 @@ with st.sidebar:
                     else:
                         st.error("PDF okunamadı.")
                         
-    # YENİ ÖZELLİK: EXCEL/CSV ANALİZİ
     with st.expander(CEVIRI["tr"]["veri_analizi"]):
         data_file = st.file_uploader("CSV veya Excel Yükle", type=["csv", "xlsx"])
         if data_file:
@@ -180,13 +178,11 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"Dosya okunamadı: {e}")
 
-    # HAZIR SORULAR
     with st.expander(CEVIRI["tr"]["hazir_sorular"]):
         if st.button("💡 Bana bir iş fikri ver"):
             st.session_state.mesajlar.append({"role": "user", "content": "Bana yenilikçi bir iş fikri ver."})
             st.rerun()
 
-    # GEÇMİŞ SOHBETLER
     with st.expander(CEVIRI["tr"]["gecmis"]):
         gecmis = gecmis_sohbetleri_getir()
         if gecmis:
@@ -227,7 +223,6 @@ for i, m in enumerate(st.session_state.mesajlar):
             if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"):
                 st.code(m["content"])
 
-# --- KAMERA DESTEĞİ ---
 with st.expander(CEVIRI["tr"]["kamera"]):
     foto = st.camera_input("Fotoğraf Çek")
     if foto and st.button("📸 Fotoğrafı Analiz Et", key="cam_analiz"):
@@ -242,14 +237,12 @@ with st.expander(CEVIRI["tr"]["kamera"]):
             except Exception as e:
                 st.error(f"Hata: {e}")
 
-# --- MİKROFON ---
 st.markdown("**🎤 Sesli Giriş:**")
 st.components.v1.html("""
 <script>function startDictation() { if (window.hasOwnProperty('webkitSpeechRecognition')) { var recognition = new webkitSpeechRecognition(); recognition.continuous = false; recognition.interimResults = false; recognition.lang = "tr-TR"; recognition.start(); recognition.onresult = function(e) { alert("Duyduğum: " + e.results[0][0].transcript); recognition.stop(); }; } }</script>
 <button onclick="startDictation()" style="background: #4d6bfe; color: white; padding: 10px; border-radius: 10px; border: none; cursor: pointer; width: 100%;">🎤 Konuş ve Yazıya Çevir</button>
 """, height=60)
 
-# --- GİRİŞ KUTUSU ---
 if soru := st.chat_input(CEVIRI["tr"]["sor"]):
     st.session_state.mesajlar.append({"role": "user", "content": soru})
     
@@ -280,7 +273,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
 
             mesajlar_gonder = [{"role": "system", "content": kisi}]
             
-            # HAFIZA SİSTEMİNİ PROMPTA EKLE
             if st.session_state.hafiza:
                 mesajlar_gonder.append({"role": "system", "content": f"Kullanıcı hakkında bilmen gerekenler: {st.session_state.hafiza}"})
                 
