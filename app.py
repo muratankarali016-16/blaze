@@ -44,13 +44,13 @@ MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
 
 # --- SESSION STATE ---
-if "kullanici_id" not in st.session_state: st.session_state.kullanici_id = str(uuid.uuid4())[:8]
 if "mesajlar" not in st.session_state: st.session_state.mesajlar = []
 if "hafiza" not in st.session_state: st.session_state.hafiza = ""
 if "otomatik_ses" not in st.session_state: st.session_state.otomatik_ses = False
 if "onay_verildi" not in st.session_state: st.session_state.onay_verildi = False
 if "pdf_metin" not in st.session_state: st.session_state.pdf_metin = ""
 if "sayfa" not in st.session_state: st.session_state.sayfa = "anasayfa"
+if "kullanici_id" not in st.session_state: st.session_state.kullanici_id = "Misafir"
 
 # --- VERİTABANI ---
 def db_baglantisi(): return sqlite3.connect("blazegpt.db", check_same_thread=False)
@@ -96,14 +96,24 @@ if not st.session_state.onay_verildi:
 if st.session_state.sayfa == "anasayfa":
     st.markdown("<h1 style='text-align: center; color: #4d6bfe; font-size: 4em;'>🔥 BlazeX</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-size: 1.2em;'>Geleceğin Yapay Zeka Asistanı</p>", unsafe_allow_html=True)
+    st.write("---")
+    
+    # KULLANICI ADI SORMA EKRANI
+    misafir_adi = st.text_input("Sana ne diyeyim? (Örn: Murat)", key="isim_input", placeholder="İsmini yaz...")
+    
     if st.button("🚀 Hemen Başla", use_container_width=True, type="primary"):
+        if misafir_adi.strip():
+            st.session_state.kullanici_id = misafir_adi.strip()
         st.session_state.sayfa = "uygulama"; st.rerun()
     st.stop()
 
 if st.session_state.sayfa == "uygulama":
     with st.sidebar:
-        st.markdown(f"### 👤 Oturum: {st.session_state.kullanici_id}")
-        if st.button("🚪 Ana Sayfa"): st.session_state.sayfa = "anasayfa"; st.rerun()
+        st.markdown(f"### 👤 {st.session_state.kullanici_id}")
+        if st.button("🚪 Ana Sayfa"): 
+            st.session_state.sayfa = "anasayfa"
+            st.session_state.mesajlar = [] # Sohbeti sıfırla
+            st.rerun()
         st.markdown("---")
         
         model = st.selectbox(CEVIRI["tr"]["model"], MODELLER, index=0) 
@@ -209,11 +219,11 @@ if st.session_state.sayfa == "uygulama":
                         temperature=0.6
                     )
                     
-                    tam_metin = [] # Listeye çevirdik
+                    tam_metin = [] # Hata vermemesi için listeye çevirdik
                     def stream_uretici():
                         for parca in stream:
                             icerik = parca.choices[0].delta.content or ""
-                            tam_metin.append(icerik) # Listeye ekle
+                            tam_metin.append(icerik)
                             yield icerik
                     
                     yer.write_stream(stream_uretici())
