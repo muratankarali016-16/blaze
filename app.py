@@ -158,12 +158,10 @@ if st.session_state.sayfa == "uygulama":
     for i, m in enumerate(st.session_state.mesajlar):
         if not isinstance(m["content"], str): continue
         
-        # ChatGPT Tarzı Mesaj Gösterimi (Avatarlı)
         avatar = "👤" if m["role"] == "user" else "🔥"
         with st.chat_message(m["role"], avatar=avatar):
             st.markdown(m["content"])
             
-            # Bot mesajıysa butonları göster
             if m["role"] == "assistant":
                 c1, c2, c3 = st.columns([1, 1, 8])
                 with c1:
@@ -173,19 +171,16 @@ if st.session_state.sayfa == "uygulama":
 
     # --- GİRİŞ KUTUSU VE ANİMASYON ---
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
-        # Kullanıcı mesajını ekle ve göster
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         with st.chat_message("user", avatar="👤"):
             st.markdown(soru)
             
-        # Bot cevabı için alan aç
         with st.chat_message("assistant", avatar="🔥"):
             yer = st.empty()
             
             try:
-                # Niyet analizi (Basit)
                 niyet = "NORMAL"
-                if "çiz" in soru.lower() or "resim" in soru.lower(): niyet = "GORSEL"
+                if "çiz" in soru.lower() or "resim" in soru.lower() or "görsel" in soru.lower(): niyet = "GORSEL"
                 
                 if niyet == "GORSEL":
                     with yer.container():
@@ -200,7 +195,6 @@ if st.session_state.sayfa == "uygulama":
                             st.error("Görsel oluşturulamadı.")
                             cevap = "Hata."
                 else:
-                    # "Düşünüyor..." animasyonu
                     yer.markdown("🤔 *BlazeX düşünüyor...*")
                     
                     mesajlar_gonder = [{"role": "system", "content": kisi}]
@@ -215,29 +209,24 @@ if st.session_state.sayfa == "uygulama":
                         temperature=0.6
                     )
                     
-                    # Harf harf yazma (Streaming)
+                    tam_metin = ""
                     def stream_uretici():
+                        nonlocal tam_metin
                         for parca in stream:
-                            yield parca.choices[0].delta.content or ""
+                            icerik = parca.choices[0].delta.content or ""
+                            tam_metin += icerik
+                            yield icerik
                     
-                    # st.write_stream ile animasyonlu yazdır
                     yer.write_stream(stream_uretici())
                     
-                    # Cevabı kaydet
-                    cevap = "".join([parca.choices[0].delta.content or "" for parca in stream]) # Burada tekrar okuyamayız, bu yüzden stream'i bir listede toplamak daha iyi ama basit tutuyoruz.
-                    # NOT: Streamlit write_stream kullandığımızda veriyi geri alamıyoruz, bu yüzden aşağıda geçici bir çözümle kaydedeceğiz.
+                    if tam_metin:
+                        st.session_state.mesajlar.append({"role": "assistant", "content": tam_metin})
+                        cevap = tam_metin
             
             except Exception as e:
                 st.error(f"⚠️ Hata: {e}")
                 cevap = "Bir hata oluştu."
         
-        # Cevabı kaydet (Stream yüzünden biraz geç olacak ama)
-        if niyet != "GORSEL":
-            # Stream bittiğinde son mesajı almak için bir hile
-            st.session_state.mesajlar.append({"role": "assistant", "content": "*(Animasyonlu cevap - geçmiş için yeniden yüklenemez)*"})
-        else:
-            pass
-            
         if st.session_state.otomatik_ses and cevap and cevap != "Bir hata oluştu.":
             sesli_oku(cevap)
             
