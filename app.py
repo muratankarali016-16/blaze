@@ -8,15 +8,9 @@ import requests
 from io import BytesIO
 import uuid
 import base64
+from pypdf import PdfReader
 
-# Supabase için (Eğer kullanırsan)
-try:
-    from supabase import create_client, Client
-    SUPABASE_AKTIF = True
-except ImportError:
-    SUPABASE_AKTIF = False
-
-st.set_page_config(page_title="BlazeX - Akıllı Asistan", page_icon="🔥", layout="centered")
+st.set_page_config(page_title="BlazeX - Süper Asistan", page_icon="🔥", layout="wide")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
@@ -29,49 +23,34 @@ CEVIRI = {
         "ozel_karakter": "Kendi Karakterini Yarat", "karakter_yaz": "Karakter talimatını yaz...",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
-        "aydinlatma": "📜 Gizlilik ve Aydınlatma",
+        "aydinlatma": "📜 Gizlilik",
         "aydinlatma_metni": """
         **Veri Sorumlusu:** BlazeX (Kişisel Kullanım)
-        Bu uygulama, 6698 sayılı KVKK kapsamında verilerinizi işlemektedir. 
-        - **İşlenen Veriler:** Sohbet geçmişiniz ve oturum bilgileriniz.
-        - **Aktarım:** Hizmet için sohbet içerikleri Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
-        - **Haklarınız:** Verilerinizin silinmesini talep etme hakkına sahipsiniz.
-        
-        ⚠️ **GÜVENLİK UYARISI:** Lütfen bu sisteme özel bilgilerinizi, ileri düzey kurumsal bilgilerinizi ve kişisel bilgilerinizi yazmayın.
-        ⏳ **API LİMİTİ UYARISI:** Sistemin günlük kullanım limiti 1.000 istektir. Eğer bir limit uyarısı alırsanız, lütfen yarın tekrar deneyin.
-        """
+        Bu uygulama KVKK kapsamında verilerinizi işlemektedir. 
+        Sohbetleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır.
+        ⚠️ Lütfen kişisel bilgilerinizi yazmayın.
+        """,
+        "hazir_sorular": "💡 Hazır Sorular", "gecmis": "📚 Geçmiş Sohbetler",
+        "pdf_oku": "📄 PDF Yükle ve Oku", "otomatik_ses": "🔊 Otomatik Sesli Okuma"
     }
 }
 
-# İNSANSI KARAKTERLER (Yapay zekanın robotik reddetmelerini engeller)
 KISILIKLER = {
-    "Normal": """Sen BlazeX adında samimi, esprili ve yardımcı bir yapay zeka asistanısın. 
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Arkadaş canlısı ve doğal bir dil kullan.
-- Eğer bir soruya cevap veremiyorsan (hassas bir konuysa veya bilmiyorsan), asla robotik bir dille 'Bunu yapamam' deme. Bunun yerine 'Bunu yanıtlamam doğru olmaz, ama şu konuda yardımcı olabilirim...' gibi kibarca konuyu değiştir.
-- Kısa ve öz cevaplar ver, kullanıcıyı sıkmadan sohbet et.""",
-
-    "Öğretmen": """Sen sabırlı bir öğretmensin. 
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Konuları basit örneklerle, adım adım anlat. 
-- Kullanıcıyı cesaretlendir.""",
-
-    "Kod Ustası": """Sen uzman bir yazılımcısın. 
-Kuralların:
-- Her zaman Türkçe cevap ver.
-- Temiz, yorumlu ve çalışan kodlar yaz. 
-- Kodun nasıl çalıştığını kısaca açıkla."""
+    "Normal": "Sen BlazeX adında samimi ve yardımcı bir asistansın. Türkçe cevap ver. Eğer kullanıcının yazdığı metin üzgün veya kızgın bir tondaysa, ona göre daha sakin ve empatik bir yanıt ver. Robotik olma.",
+    "Öğretmen": "Sen sabırlı bir öğretmensin. Türkçe cevap ver.",
+    "Kod Ustası": "Sen uzman bir yazılımcısın. Türkçe cevap ver. Kod bloklarını ```python ... ``` şeklinde yaz."
 }
 
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 VISION_MODEL = "qwen/qwen3.8-27b"
 
+# --- SESSION STATE ---
 if "kullanici_id" not in st.session_state:
     st.session_state.kullanici_id = str(uuid.uuid4())[:8]
 if "mesajlar" not in st.session_state:
     st.session_state.mesajlar = []
+if "otomatik_ses" not in st.session_state:
+    st.session_state.otomatik_ses = False
 
 # --- VERİTABANI ---
 def db_baglantisi():
@@ -95,10 +74,37 @@ def kaydet_sohbet(mesajlar):
               (st.session_state.kullanici_id, baslik, json.dumps(mesajlar, ensure_ascii=False)))
     db_baglantisi().commit()
 
+def gecmis_sohbetleri_getir():
+    conn = db_baglantisi()
+    c = conn.cursor()
+    c.execute("SELECT id, baslik FROM sohbetler WHERE kullanici_id = ? ORDER BY id DESC LIMIT 10", (st.session_state.kullanici_id,))
+    res = c.fetchall()
+    conn.close()
+    return res
+
+def sohbet_yukle(sid):
+    conn = db_baglantisi()
+    c = conn.cursor()
+    c.execute("SELECT mesajlar FROM sohbetler WHERE id = ?", (sid,))
+    res = c.fetchone()
+    conn.close()
+    if res:
+        st.session_state.mesajlar = json.loads(res[0])
+
+def pdf_metin_cikar(dosya):
+    try:
+        reader = PdfReader(BytesIO(dosya.getvalue()))
+        metin = ""
+        for sayfa in reader.pages:
+            metin += sayfa.extract_text() + "\n"
+        return metin[:5000] # Limitli okuyalım
+    except Exception as e:
+        return None
+
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 
-# --- ARAYÜZ (CSS) ---
+# --- CSS ---
 st.markdown("""
 <style>
     .stApp { background-color: #1e1e2e; }
@@ -108,13 +114,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- TTS ---
+# --- TTS (Sesli Okuma) ---
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = 'tr-TR'; window.speechSynthesis.speak(msg);</script>"
     st.components.v1.html(js, height=0)
 
-# --- BAŞLIK (LOGO + İSİM) ---
+# --- BAŞLIK ---
 col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image("logo.png", width=100)
@@ -136,14 +142,48 @@ with st.sidebar:
         
     st.markdown("---")
     
-    if st.session_state.mesajlar:
-        sohbet_metni = "".join([f"{m['role']}: {m['content']}\n\n" for m in st.session_state.mesajlar if isinstance(m['content'], str)])
-        st.download_button(CEVIRI["tr"]["disa_aktar"], sohbet_metni, f"blazex_{datetime.now().strftime('%Y%m%d')}.txt", use_container_width=True)
+    # 1. PDF YÜKLEME
+    with st.expander(CEVIRI["tr"]["pdf_oku"]):
+        pdf_file = st.file_uploader("PDF Seç", type=["pdf"])
+        if pdf_file:
+            if st.button("📄 PDF'i Oku ve Özetle"):
+                with st.spinner("Okunuyor..."):
+                    metin = pdf_metin_cikar(pdf_file)
+                    if metin:
+                        st.session_state.mesajlar.append({"role": "user", "content": f"Şu PDF'in içeriğini özetle:\n{metin}"})
+                        st.success("PDF yüklendi, sorunuzu sorun!")
+                    else:
+                        st.error("PDF okunamadı.")
     
+    # 2. HAZIR SORULAR
+    with st.expander(CEVIRI["tr"]["hazir_sorular"]):
+        if st.button("💡 Bana bir iş fikri ver"):
+            st.session_state.mesajlar.append({"role": "user", "content": "Bana yenilikçi bir iş fikri ver."})
+            st.rerun()
+        if st.button("📝 İngilizceye Çevir"):
+            st.session_state.mesajlar.append({"role": "user", "content": "Şu metni İngilizceye çevir: 'Merhaba dünya'"})
+            st.rerun()
+        if st.button("😂 Beni güldür"):
+            st.session_state.mesajlar.append({"role": "user", "content": "Bana kısa ve komik bir fıkra anlat."})
+            st.rerun()
+
+    # 3. GEÇMİŞ SOHBETLER
+    with st.expander(CEVIRI["tr"]["gecmis"]):
+        gecmis = gecmis_sohbetleri_getir()
+        if gecmis:
+            for sid, baslik in gecmis:
+                if st.button(f"💬 {baslik}", key=f"gecmis_{sid}"):
+                    sohbet_yukle(sid)
+                    st.rerun()
+        else:
+            st.caption("Henüz geçmiş yok.")
+
     st.markdown("---")
-    gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
     
-    # İNTERNETE ARA TOGGLE'I (Varsayılan: Kapalı)
+    # 4. OTOMATİK SES
+    st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
+    
+    gorsel_modu = st.toggle(CEVIRI["tr"]["gorsel_modu"], value=False)
     web_arama_modu = st.toggle("🌐 İnternette Ara", value=False)
     
     with st.expander(CEVIRI["tr"]["aydinlatma"]):
@@ -155,12 +195,16 @@ if not st.session_state.mesajlar:
 
 for i, m in enumerate(st.session_state.mesajlar):
     if not isinstance(m["content"], str): continue
+    
+    # WhatsApp Tarzı Balonlar ve Markdown Desteği
     if m["role"] == "user":
         st.markdown(f'<div style="text-align: right; margin-bottom: 10px;"><span style="background: #005c4b; padding: 12px; border-radius: 15px; color: white; display: inline-block; max-width: 80%;">{m["content"]}</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div style="text-align: left; margin-bottom: 10px;"><span style="background: #262637; padding: 12px; border-radius: 15px; color: white; display: inline-block; max-width: 80%;">{m["content"]}</span></div>', unsafe_allow_html=True)
-    
-    if m["role"] == "assistant":
+        # Bot mesajlarını markdown olarak göster (kodları renklendirmek için)
+        with st.chat_message("assistant", avatar="🔥"):
+            st.markdown(m["content"])
+            
+        # Sesli okuma ve kopyalama butonları
         c1, c2, c3 = st.columns([1, 1, 8])
         with c1:
             if st.button(CEVIRI["tr"]["sesli_dinle"], key=f"tts_{i}"):
@@ -169,9 +213,9 @@ for i, m in enumerate(st.session_state.mesajlar):
             if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"):
                 st.code(m["content"])
 
-# --- DOSYA YÜKLEME ---
-with st.expander("📎 Dosya / Görsel Ekle"):
-    yuklenen_resim = st.file_uploader("Görsel seç (JPG/PNG)", type=["jpg", "png", "jpeg"])
+# --- DOSYA YÜKLEME (GÖRSEL) ---
+with st.expander("📎 Görsel Ekle"):
+    yuklenen_resim = st.file_uploader("Görsel seç", type=["jpg", "png", "jpeg"])
     if yuklenen_resim and st.button(CEVIRI["tr"]["vision_analiz"]):
         with st.spinner("Analiz ediliyor..."):
             img_bytes = yuklenen_resim.getvalue()
@@ -183,7 +227,7 @@ with st.expander("📎 Dosya / Görsel Ekle"):
                 kaydet_sohbet(st.session_state.mesajlar)
                 st.rerun()
             except Exception as e:
-                st.error(f"Görsel analiz hatası: {e}")
+                st.error(f"Hata: {e}")
 
 # --- MİKROFON ---
 st.markdown("**🎤 Sesli Giriş:**")
@@ -213,7 +257,6 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         tam = ""
         try:
             arama_sonucu = ""
-            # SADECE BUTON AÇIKSA WEB'DE ARA
             if web_arama_modu and tavily:
                 with st.spinner("🌐 İnternette araştırıyorum..."):
                     try:
@@ -223,12 +266,8 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                     except: pass
 
             mesajlar_gonder = [{"role": "system", "content": kisi}]
-            
             if arama_sonucu:
                 mesajlar_gonder.append({"role": "system", "content": f"İşte güncel bilgiler:\n{arama_sonucu}"})
-            
-            # Modelin doğal ve insansı sohbet etmesi için ek talimat
-            mesajlar_gonder.append({"role": "system", "content": "Eğer sana özel bir arama sonucu verilmediyse, kendi genel bilgilerinle doğal bir sohbet havasında cevap ver. Kesinlikle robotik olma."})
             
             mesajlar_gonder += st.session_state.mesajlar
             
@@ -236,7 +275,7 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                 model=model, 
                 messages=mesajlar_gonder, 
                 stream=True, 
-                temperature=0.6  # Daha tutarlı ve insansı cevaplar için düşürüldü
+                temperature=0.6 
             )
             for parca in stream:
                 tam += parca.choices[0].delta.content or ""
@@ -246,6 +285,7 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
                 cevap += f"\n\n{CEVIRI['tr']['kaynaklar']}\n"
                 for r in res.get("results", []):
                     cevap += f"- [{r['title']}]({r['url']})\n"
+                    
         except Exception as e:
             hata_mesaji = str(e)
             if "429" in hata_mesaji or "rate limit" in hata_mesaji.lower():
@@ -257,4 +297,9 @@ if soru := st.chat_input(CEVIRI["tr"]["sor"]):
     
     st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
     kaydet_sohbet(st.session_state.mesajlar)
+    
+    # Otomatik Sesli Okuma (Eğer açıksa)
+    if st.session_state.otomatik_ses and cevap != "Bir hata oluştu.":
+        sesli_oku(cevap)
+        
     st.rerun()
