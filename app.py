@@ -209,19 +209,19 @@ if st.session_state.sayfa == "uygulama":
                         temperature=0.6
                     )
                     
-                    tam_metin = ""
+                    tam_metin = [] # Listeye çevirdik
                     def stream_uretici():
-                        nonlocal tam_metin
                         for parca in stream:
                             icerik = parca.choices[0].delta.content or ""
-                            tam_metin += icerik
+                            tam_metin.append(icerik) # Listeye ekle
                             yield icerik
                     
                     yer.write_stream(stream_uretici())
                     
-                    if tam_metin:
-                        st.session_state.mesajlar.append({"role": "assistant", "content": tam_metin})
-                        cevap = tam_metin
+                    son_cevap = "".join(tam_metin)
+                    if son_cevap:
+                        st.session_state.mesajlar.append({"role": "assistant", "content": son_cevap})
+                        cevap = son_cevap
             
             except Exception as e:
                 st.error(f"⚠️ Hata: {e}")
