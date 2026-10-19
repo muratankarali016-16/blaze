@@ -13,14 +13,14 @@ import pandas as pd
 import yfinance as yf
 import hashlib
 
-st.set_page_config(page_title="BlazeX - Akıllı Asistan", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="BlazeX - Mega Asistan", page_icon="🔥", layout="wide")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
         "baslik": "BlazeX", "alt_baslik": "Sohbet, Oyun, Finans ve Daha Fazlası ⚡",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık resim çizmemi mi istiyorsun yoksa internete bakmamı mı, kendim karar veriyorum!",
+        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık bir dedektif, bir yazar, bir mimar ve bir finans uzmanıyım!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
@@ -87,25 +87,17 @@ def kaydet_sohbet(mesajlar, k_id):
     c.execute("INSERT INTO sohbetler (kullanici_id, baslik, mesajlar) VALUES (?, ?, ?)", (k_id, baslik, json.dumps(mesajlar, ensure_ascii=False)))
     db_baglantisi().commit()
 
+def pdf_metin_cikar(dosya):
+    try:
+        reader = PdfReader(BytesIO(dosya.getvalue()))
+        metin = ""
+        for sayfa in reader.pages:
+            metin += sayfa.extract_text() + "\n"
+        return metin[:5000]
+    except: return None
+
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
-
-# --- NİYET ANALİZİ (Görsel + Arama) ---
-def niyet_analizi_yap(soru):
-    try:
-        cevap = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
-            messages=[
-                {"role": "system", "content": "Sen bir niyet analizi asistanısın. Kullanıcının sorusunu analiz et ve SADECE şu üç kelimeden birini yaz:\n1. Eğer kullanıcı resim çizmeni/görsel oluşturmanı istiyorsa 'GORSEL' yaz.\n2. Eğer güncel bir bilgi (hava durumu, haber, maç skoru, fiyat) soruyorsa 'ARAMA' yaz.\n3. Eğer normal bir sohbet, kod yazma, matematik veya genel kültür sorusuysa 'NORMAL' yaz.\nBaşka hiçbir açıklama yapma."},
-                {"role": "user", "content": soru}
-            ],
-            max_tokens=5, temperature=0.0
-        )
-        karar = cevap.choices[0].message.content.strip().upper()
-        if "GORSEL" in karar: return "GORSEL"
-        if "ARAMA" in karar: return "ARAMA"
-        return "NORMAL"
-    except: return "NORMAL"
 
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
@@ -168,10 +160,43 @@ if st.session_state.sayfa == "uygulama":
             
         st.markdown("---")
         
-        with st.expander(CEVIRI["tr"]["hafiza"]):
-            hafiza_input = st.text_area("Hafıza:", value=st.session_state.hafiza)
-            if st.button("🧠 Kaydet"): st.session_state.hafiza = hafiza_input
+        # DEDEKTİF MODU
+        with st.expander(CEVIRI["tr"]["dedektif"]):
+            metin = st.text_area("Analiz edilecek metni girin:")
+            if st.button("🕵️ Gizli Anlamı Çöz"):
+                st.session_state.mesajlar.append({"role": "user", "content": f"Bu metni bir dedektif gibi analiz et ve gizli anlamları bul:\n{metin}"})
+                st.rerun()
 
+        # MİMAR
+        with st.expander(CEVIRI["tr"]["mimar"]):
+            oda = st.text_input("Nasıl bir oda istiyorsun?")
+            if st.button("🎨 Odayı Tasarla"):
+                st.session_state.mesajlar.append({"role": "user", "content": f"Bana şu oda için bir tasarım planı ve eşya listesi çıkar: {oda}"})
+                st.rerun()
+
+        # RUTİN PLANLAYICI
+        with st.expander(CEVIRI["tr"]["rutin"]):
+            isler = st.text_area("Bugün neler yapmalısın?")
+            if st.button("⚡ Plan Oluştur"):
+                st.session_state.mesajlar.append({"role": "user", "content": f"Şu işlerimi saat saat planla:\n{isler}"})
+                st.rerun()
+
+        # PDF SESLENDİRİCİ
+        with st.expander(CEVIRI["tr"]["pdf_ses"]):
+            pdf_file = st.file_uploader("Seslendirilecek PDF", type=["pdf"])
+            if pdf_file:
+                if st.button("📚 PDF'i Sesli Oku"):
+                    metin = pdf_metin_cikar(pdf_file)
+                    if metin:
+                        st.session_state.pdf_metin = metin
+                        st.success("PDF Hazır! Okumak için butona basın.")
+                    else:
+                        st.error("PDF okunamadı.")
+            if st.session_state.pdf_metin:
+                if st.button("🔊 Dinlemeye Başla"):
+                    sesli_oku(st.session_state.pdf_metin)
+
+        # FİNANS
         with st.expander(CEVIRI["tr"]["finans"]):
             sembol = st.text_input("Sembol (Örn: BTC-USD, THYAO.IS)")
             if st.button("Fiyat Getir"):
@@ -180,6 +205,7 @@ if st.session_state.sayfa == "uygulama":
                     if not veri.empty: st.success(f"**{sembol}**: {veri['Close'].iloc[-1]:.2f}")
                 except: st.error("Bulunamadı.")
 
+        # KOD ÇALIŞTIRICI
         with st.expander(CEVIRI["tr"]["kod_calistirici"]):
             kod = st.text_area("Python:")
             if st.button("Çalıştır"):
@@ -189,6 +215,7 @@ if st.session_state.sayfa == "uygulama":
                     st.success("Çalıştı!"); st.write(local_vars)
                 except Exception as e: st.error(f"Hata: {e}")
 
+        # OYUN MODU (RPG)
         with st.expander(CEVIRI["tr"]["oyun_modu"]):
             if st.button("🎮 Maceraya Başla"):
                 st.session_state.mesajlar.append({"role": "user", "content": "Beni karanlık bir ormanın girişinde başlatan, seçimlerime göre ilerleyen bir macera oyunu başlat. Bana seçenekler sun."})
@@ -218,29 +245,21 @@ if st.session_state.sayfa == "uygulama":
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         cevap = ""
-        
-        # --- NİYET ANALİZİ ---
-        niyet = niyet_analizi_yap(soru)
-        
-        # 1. DURUM: GÖRSEL OLUŞTURMA
-        if niyet == "GORSEL":
+        if gorsel_modu:
             with st.spinner("🎨 Görsel oluşturuluyor..."):
                 try:
                     url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
                     r = requests.get(url, timeout=90)
                     if r.status_code == 200:
                         st.image(BytesIO(r.content), use_container_width=True)
-                        cevap = f"🖼️ İstediğin görseli oluşturdum: {soru}"
+                        cevap = f"🖼️ Görsel oluşturuldu: {soru}"
                     else: cevap = "Görsel oluşturulamadı."
                 except Exception as e: cevap = f"Görsel hatası: {e}"
-                    
-        # 2. DURUM: İNTERNET ARAMASI veya NORMAL SOHBET
         else:
             tam = ""
             try:
                 arama_sonucu = ""
-                if niyet == "ARAMA" and tavily:
-                    st.toast("🌐 Güncel bilgi gerektiği için internette araştırıyorum...")
+                if web_arama_modu and tavily:
                     with st.spinner("🌐 Araştırılıyor..."):
                         try:
                             res = tavily.search(query=soru, max_results=2)
