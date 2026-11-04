@@ -1,6 +1,5 @@
 import streamlit as st
 from groq import Groq
-from tavily import TavilyClient
 import sqlite3
 import json
 from datetime import datetime
@@ -8,40 +7,31 @@ import requests
 from io import BytesIO
 import uuid
 import base64
-from pypdf import PdfReader
-import pandas as pd
-import yfinance as yf
 import hashlib
+import qrcode
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="BlazeX - Ultimate v4", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="BlazeX", page_icon="🔥", layout="centered")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
-        "baslik": "BlazeX", "alt_baslik": "Dijital İkiz, Arena ve Galeri ⚡",
-        "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık bir dijital ikizim, bir arena sunucum ve kendi sanat galerim var!",
+        "baslik": "BlazeX", "alt_baslik": "Düşünen, Görsel ve Akıllı Asistan ⚡",
+        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Benimle sohbet edebilir, resim çizebilir veya bir web sitesini okutabilirsin!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
-        "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
-        "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
+        "sesli_dinle": "🔊 Dinle", "kopyala": "📋",
         "aydinlatma": "📜 Gizlilik ve Çerez Politikası", 
-        "aydinlatma_metni": "Bu uygulama, size daha iyi hizmet verebilmek ve sohbet geçmişinizi güvenli bir şekilde saklamak için çerezler (cookies) ve yerel depolama kullanmaktadır.",
-        "gecmis": "📚 Geçmiş Sohbetler", "pdf_oku": "📄 PDF Yükle", "otomatik_ses": "🔊 Otomatik Ses",
-        "hafiza": "🧠 Yapay Zeka Hafızası", "kod_calistirici": "💻 Kod Çalıştırıcı", "finans": "📈 Canlı Finans",
-        "pdf_ses": "📚 PDF Seslendirici", "galeri": "🎨 Sanat Galerisi",
-        "arena": "⚔️ Yapay Zeka Arena", "istatistik": "📊 İstatistikler",
-        "ses_tonu": "🗣️ Ses Tonu Seç", "paylas": "🔗 Sohbeti Paylaş",
+        "aydinlatma_metni": "Size daha iyi hizmet verebilmek için çerezler kullanıyoruz. Devam etmek için lütfen kabul edin.",
         "giris_yap": "👤 Giriş Yap", "kayit_ol": "📝 Hesap Aç",
-        "misafir_giris": "🚀 Hesapsız Giriş (Misafir)"
+        "misafir_giris": "🚀 Hesapsız Giriş (Misafir)",
+        "galeri": "🎨 Sanat Galerisi", "qr_kod": "📱 QR Kod Üretici"
     }
 }
 
 KISILIKLER = {
     "Normal": "Sen BlazeX adında samimi ve yardımcı bir asistansın. Türkçe cevap ver.",
     "Psikolog": "Sen empatik, dinleyen ve rahatlatıcı bir psikologsun.",
-    "Dijital İkiz": "Sen kullanıcının dijital ikizisin. Onun üslubuyla, onun gibi düşünerek cevap ver.",
-    "Dedektif": "Sen Sherlock Holmes gibi zeki bir dedektifsin."
+    "Dijital İkiz": "Sen kullanıcının dijital ikizisin. Onun üslubuyla cevap ver."
 }
 
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
@@ -62,16 +52,9 @@ if "galeri" not in st.session_state: st.session_state.galeri = []
 def db_baglantisi(): return sqlite3.connect("blazegpt.db", check_same_thread=False)
 def db_olustur():
     c = db_baglantisi().cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS sohbetler (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, baslik TEXT, mesajlar TEXT, paylasim_id TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS kullanicilar (kullanici_adi TEXT PRIMARY KEY, sifre TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS istatistikler (ozellik TEXT PRIMARY KEY, sayi INTEGER)")
     db_baglantisi().commit()
 db_olustur()
-
-def istatistik_artir(ozellik):
-    c = db_baglantisi().cursor()
-    c.execute("INSERT INTO istatistikler (ozellik, sayi) VALUES (?, 1) ON CONFLICT(ozellik) DO UPDATE SET sayi = sayi + 1", (ozellik,))
-    db_baglantisi().commit()
 
 def sifre_hashle(sifre): return hashlib.sha256(sifre.encode()).hexdigest()
 
@@ -90,17 +73,7 @@ def giris_yap(kullanici_adi, sifre):
     if res and res[0] == sifre_hashle(sifre): return True
     return False
 
-def kaydet_sohbet(mesajlar, k_id, paylasim_id=None):
-    baslik = "Sohbet"
-    for m in mesajlar:
-        if m["role"] == "user" and isinstance(m["content"], str):
-            baslik = m["content"][:30]; break
-    c = db_baglantisi().cursor()
-    c.execute("INSERT INTO sohbetler (kullanici_id, baslik, mesajlar, paylasim_id) VALUES (?, ?, ?, ?)", (k_id, baslik, json.dumps(mesajlar, ensure_ascii=False), paylasim_id))
-    db_baglantisi().commit()
-
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 
 def sesli_oku(metin, dil_kodu="tr-TR"):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
@@ -158,56 +131,57 @@ if st.session_state.sayfa == "uygulama":
         kisi_secim = st.selectbox(CEVIRI["tr"]["kisilik"], list(KISILIKLER.keys()))
         kisi = KISILIKLER[kisi_secim]
         
-        # SES TONU SEÇİMİ
-        ses_secenekleri = {"Normal (Türkçe)": "tr-TR", "Korsan (İngilizce)": "en-GB", "Robot (İngilizce)": "en-US", "Şair (Fransızca)": "fr-FR"}
+        ses_secenekleri = {"Normal": "tr-TR", "Korsan": "en-GB", "Robot": "en-US"}
         secilen_ses = st.selectbox(CEVIRI["tr"]["ses_tonu"], list(ses_secenekleri.keys()))
         st.session_state.ses_tonu = ses_secenekleri[secilen_ses]
 
         st.markdown("---")
         
-        # YAPAY ZEKA ARENA
-        with st.expander(CEVIRI["tr"]["arena"]):
-            arena_konu = st.text_input("Tartışma Konusu (Örn: Yapay zeka insanlığı yok eder mi?)")
-            if st.button("⚔️ Arenayı Başlat"):
-                if arena_konu:
-                    istatistik_artir("Arena")
-                    with st.spinner("Yapay zekalar tartışıyor..."):
-                        # İki farklı karaktere aynı konuyu soruyoruz
-                        cevap1 = client.chat.completions.create(model=model, messages=[{"role": "user", "content": f"Sen bir iyimser asistansın. Şu konu hakkında tartış: {arena_konu}"}]).choices[0].message.content
-                        cevap2 = client.chat.completions.create(model=model, messages=[{"role": "user", "content": f"Sen bir kötümser asistansın. Şu konu hakkında tartış: {arena_konu}"}]).choices[0].message.content
-                        
-                        st.session_state.mesajlar.append({"role": "assistant", "content": f"🟢 **İyimser AI:**\n{cevap1}"})
-                        st.session_state.mesajlar.append({"role": "assistant", "content": f"🔴 **Kötümser AI:**\n{cevap2}"})
+        # CANLI WEB TARAYICISI / SCRAPER
+        with st.expander("🌐 Web Sitesi Okuyucu"):
+            url_input = st.text_input("Link Yapıştır:")
+            if st.button("Siteyi Oku"):
+                with st.spinner("Okunuyor..."):
+                    try:
+                        res = requests.get(url_input, timeout=10)
+                        import re
+                        temiz_metin = re.sub('<[^<]+?>', '', res.text)
+                        st.session_state.mesajlar.append({"role": "user", "content": f"Şu sitedeki metni özetle:\n{temiz_metin[:3000]}"})
                         st.rerun()
+                    except Exception as e: st.error(f"Okunamadı: {e}")
+
+        # QR KOD ÜRETİCİ
+        with st.expander("📱 QR Kod Üretici"):
+            qr_link = st.text_input("Link veya Metin Girin:")
+            if st.button("QR Kod Oluştur"):
+                if qr_link:
+                    qr = qrcode.QRCode(box_size=10, border=4)
+                    qr.add_data(qr_link)
+                    qr.make(fit=True)
+                    img = qr.make_image(fill_color="black", back_color="white")
+                    buf = BytesIO()
+                    img.save(buf, format="PNG")
+                    st.image(buf.getvalue(), caption="QR Kodunuz")
 
         # SANAT GALERİSİ
-        with st.expander(CEVIRI["tr"]["galeri"]):
+        with st.expander("🎨 Sanat Galerisi"):
             if not st.session_state.galeri:
                 st.caption("Henüz görsel yok.")
             for idx, img_bytes in enumerate(st.session_state.galeri):
                 st.image(img_bytes, use_container_width=True)
-                if st.button("🗑️ Sil", key=f"del_galeri_{idx}"):
-                    st.session_state.galeri.pop(idx)
-                    st.rerun()
-
-        # İSTATİSTİKLER
-        with st.expander(CEVIRI["tr"]["istatistik"]):
-            c = db_baglantisi().cursor()
-            c.execute("SELECT ozellik, sayi FROM istatistikler")
-            for ozellik, sayi in c.fetchall():
-                st.write(f"**{ozellik}:** {sayi} kez kullanıldı.")
 
         st.markdown("---")
-        st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
+        st.session_state.otomatik_ses = st.toggle("🔊 Otomatik Ses", value=st.session_state.otomatik_ses)
 
     # --- LOGO VE BAŞLIK ---
     try:
         with open("logo.png", "rb") as f:
             logo_base64 = base64.b64encode(f.read()).decode()
-        st.markdown(f'<div style="display: flex; justify-content: center; margin-top: 20px;"><img src="data:image/png;base64,{logo_base64}" width="100" style="border-radius: 15px;"></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; justify-content: center; margin-top: 10px;"><img src="data:image/png;base64,{logo_base64}" width="100" style="border-radius: 15px; box-shadow: 0 4px 15px rgba(77, 107, 254, 0.3);"></div>', unsafe_allow_html=True)
     except: pass
         
     st.markdown(f'<h1 style="text-align: center; color: #4d6bfe; margin-top: 0;">🔥 {CEVIRI["tr"]["baslik"]}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p style="text-align: center; color: #a0a0b0;">{CEVIRI["tr"]["alt_baslik"]}</p>', unsafe_allow_html=True)
     
     if not st.session_state.mesajlar: st.info(CEVIRI["tr"]["hosgeldin"])
 
@@ -218,17 +192,11 @@ if st.session_state.sayfa == "uygulama":
         with st.chat_message(m["role"], avatar=avatar):
             st.markdown(m["content"])
             if m["role"] == "assistant":
-                c1, c2, c3 = st.columns([1, 1, 6])
+                c1, c2 = st.columns([1, 10])
                 with c1:
-                    if st.button(CEVIRI["tr"]["sesli_dinle"], key=f"tts_{i}"): sesli_oku(m["content"], st.session_state.ses_tonu)
-                with c2:
-                    # PAYLAŞ BUTONU
-                    if st.button(CEVIRI["tr"]["paylas"], key=f"share_{i}"):
-                        paylasim_id = str(uuid.uuid4())[:6]
-                        kaydet_sohbet(st.session_state.mesajlar, st.session_state.kullanici_id, paylasim_id)
-                        st.success(f"Link kopyalandı: `https://blazex.streamlit.app/?share={paylasim_id}`")
+                    if st.button("🔊", key=f"tts_{i}"): sesli_oku(m["content"], st.session_state.ses_tonu)
 
-    # --- GİRİŞ KUTUSU ---
+    # --- GİRİŞ KUTUSU VE ANİMASYON ---
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
         st.session_state.mesajlar.append({"role": "user", "content": soru})
         with st.chat_message("user", avatar="👤"): st.markdown(soru)
@@ -236,23 +204,18 @@ if st.session_state.sayfa == "uygulama":
         with st.chat_message("assistant", avatar="🔥"):
             yer = st.empty()
             try:
-                niyet = "NORMAL"
-                if "çiz" in soru.lower() or "resim" in soru.lower(): niyet = "GORSEL"
-                
-                if niyet == "GORSEL":
-                    istatistik_artir("Görsel Oluşturma")
+                if "çiz" in soru.lower() or "resim" in soru.lower() or "görsel" in soru.lower():
                     with yer.container():
                         st.write("🎨 *Görsel oluşturuluyor...*")
                         url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(soru)}?width=1024&height=1024&nologo=true"
                         r = requests.get(url, timeout=90)
                         if r.status_code == 200:
                             st.image(BytesIO(r.content), use_container_width=True)
-                            st.session_state.galeri.append(r.content) # Galeriye ekle
+                            st.session_state.galeri.append(r.content)
                             cevap = f"🖼️ Görsel oluşturuldu: {soru}"
                             st.session_state.mesajlar.append({"role": "assistant", "content": cevap})
-                        else: cevap = "Hata."
+                        else: cevap = "Görsel oluşturulamadı."
                 else:
-                    istatistik_artir("Sohbet")
                     yer.markdown("🤔 *BlazeX düşünüyor...*")
                     mesajlar_gonder = [{"role": "system", "content": kisi}]
                     if st.session_state.hafiza: mesajlar_gonder.append({"role": "system", "content": f"Kullanıcı Bilgisi: {st.session_state.hafiza}"})
