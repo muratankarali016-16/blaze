@@ -25,7 +25,7 @@ CEVIRI = {
         "giris_yap": "👤 Giriş Yap", "kayit_ol": "📝 Hesap Aç",
         "misafir_giris": "🚀 Hesapsız Giriş (Misafir)",
         "galeri": "🎨 Sanat Galerisi", "qr_kod": "📱 QR Kod Üretici",
-        "model": "🧠 Model", "kisilik": "🎭 Kişilik", "ses_tonu": "🗣️ Ses Tonu" # Eksik olanlar geri eklendi
+        "model": "🧠 Model", "kisilik": "🎭 Kişilik", "ses_tonu": "🗣️ Ses Tonu"
     }
 }
 
@@ -81,18 +81,35 @@ def sesli_oku(metin, dil_kodu="tr-TR"):
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = '{dil_kodu}'; window.speechSynthesis.speak(msg);</script>"
     components.html(js, height=0)
 
-# --- ÇEREZ ONAY ---
+# --- ÇEREZ ONAY (BİR DAHA GÖSTERME ÖZELLİKLİ) ---
+check_cookie_js = """
+<script>
+    var cookieAccepted = localStorage.getItem("blazex_cerez_kabul");
+    if (cookieAccepted === "true") {
+        window.parent.document.getElementById("cerez_durumu").value = "true";
+    }
+</script>
+<input type="hidden" id="cerez_durumu" value="false">
+"""
+components.html(check_cookie_js, height=0)
+
 if not st.session_state.cerez_onay:
     with st.container(border=True):
         st.markdown("### 🍪 Çerez Politikası")
         st.write(CEVIRI["tr"]["aydinlatma_metni"])
+        
+        bir_daha_gosterme = st.checkbox("Bu mesajı bir daha gösterme")
+        
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ Kabul Ediyorum", type="primary", use_container_width=True):
-                st.session_state.cerez_onay = True; st.rerun()
+                st.session_state.cerez_onay = True
+                if bir_daha_gosterme:
+                    components.html("<script>localStorage.setItem('blazex_cerez_kabul', 'true');</script>", height=0)
+                st.rerun()
         with col2:
             if st.button("❌ Reddediyorum", use_container_width=True):
-                st.error("Kabul etmelisiniz.")
+                st.error("Sistemi kullanabilmek için çerezleri kabul etmelisiniz.")
     st.stop()
 
 # --- GİRİŞ EKRANI ---
