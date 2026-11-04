@@ -2,7 +2,6 @@ import streamlit as st
 from groq import Groq
 import sqlite3
 import json
-from datetime import datetime
 import requests
 from io import BytesIO
 import uuid
@@ -19,7 +18,6 @@ CEVIRI = {
         "baslik": "BlazeX", "alt_baslik": "Düşünen, Görsel ve Akıllı Asistan ⚡",
         "hosgeldin": "Merhaba! Ben BlazeX 🔥 Benimle sohbet edebilir, resim çizebilir veya bir web sitesini okutabilirsin!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
-        "sesli_dinle": "🔊 Dinle", "kopyala": "📋",
         "aydinlatma": "📜 Gizlilik ve Çerez Politikası", 
         "aydinlatma_metni": "Size daha iyi hizmet verebilmek için çerezler kullanıyoruz. Devam etmek için lütfen kabul edin.",
         "giris_yap": "👤 Giriş Yap", "kayit_ol": "📝 Hesap Aç",
@@ -36,7 +34,6 @@ KISILIKLER = {
 }
 
 MODELLER = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
-VISION_MODEL = "qwen/qwen3.8-27b"
 
 # --- SESSION STATE ---
 if "mesajlar" not in st.session_state: st.session_state.mesajlar = []
@@ -81,18 +78,7 @@ def sesli_oku(metin, dil_kodu="tr-TR"):
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = '{dil_kodu}'; window.speechSynthesis.speak(msg);</script>"
     components.html(js, height=0)
 
-# --- ÇEREZ ONAY (BİR DAHA GÖSTERME ÖZELLİKLİ) ---
-check_cookie_js = """
-<script>
-    var cookieAccepted = localStorage.getItem("blazex_cerez_kabul");
-    if (cookieAccepted === "true") {
-        window.parent.document.getElementById("cerez_durumu").value = "true";
-    }
-</script>
-<input type="hidden" id="cerez_durumu" value="false">
-"""
-components.html(check_cookie_js, height=0)
-
+# --- 1. ÇEREZ ONAY (GARANTİLİ YÖNTEM) ---
 if not st.session_state.cerez_onay:
     with st.container(border=True):
         st.markdown("### 🍪 Çerez Politikası")
@@ -104,15 +90,13 @@ if not st.session_state.cerez_onay:
         with col1:
             if st.button("✅ Kabul Ediyorum", type="primary", use_container_width=True):
                 st.session_state.cerez_onay = True
-                if bir_daha_gosterme:
-                    components.html("<script>localStorage.setItem('blazex_cerez_kabul', 'true');</script>", height=0)
                 st.rerun()
         with col2:
             if st.button("❌ Reddediyorum", use_container_width=True):
                 st.error("Sistemi kullanabilmek için çerezleri kabul etmelisiniz.")
     st.stop()
 
-# --- GİRİŞ EKRANI ---
+# --- 2. GİRİŞ EKRANI ---
 if not st.session_state.giris_yapildi and st.session_state.sayfa == "giris":
     st.markdown("<h1 style='text-align: center; color: #4d6bfe; font-size: 4em;'>🔥 BlazeX</h1>", unsafe_allow_html=True)
     tab1, tab2 = st.tabs([CEVIRI["tr"]["giris_yap"], CEVIRI["tr"]["kayit_ol"]])
@@ -137,7 +121,7 @@ if not st.session_state.giris_yapildi and st.session_state.sayfa == "giris":
         st.session_state.giris_yapildi = True; st.session_state.kullanici_id = "Misafir_" + str(uuid.uuid4())[:4]; st.session_state.sayfa = "uygulama"; st.rerun()
     st.stop()
 
-# --- UYGULAMA ---
+# --- 3. UYGULAMA (SOHBET EKRANI) ---
 if st.session_state.sayfa == "uygulama":
     with st.sidebar:
         st.markdown(f"### 👤 {st.session_state.kullanici_id}")
@@ -236,6 +220,7 @@ if st.session_state.sayfa == "uygulama":
                     if st.session_state.hafiza: mesajlar_gonder.append({"role": "system", "content": f"Kullanıcı Bilgisi: {st.session_state.hafiza}"})
                     mesajlar_gonder += st.session_state.mesajlar
                     
+                    # Stream ve Animasyon
                     stream = client.chat.completions.create(model=model, messages=mesajlar_gonder, stream=True, temperature=0.6)
                     tam_metin = [] 
                     def stream_uretici():
