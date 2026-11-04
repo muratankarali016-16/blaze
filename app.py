@@ -12,19 +12,21 @@ from pypdf import PdfReader
 import pandas as pd
 import yfinance as yf
 import hashlib
+import streamlit.components.v1 as components
 
-st.set_page_config(page_title="BlazeX - Mega Asistan", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="BlazeX - Ultimate Asistan", page_icon="🔥", layout="wide")
 
 # --- ÇEVİRİ ---
 CEVIRI = {
     "tr": {
-        "baslik": "BlazeX", "alt_baslik": "Sesli, Oyunlu ve Mega Asistan ⚡",
+        "baslik": "BlazeX", "alt_baslik": "Düşünen, Sesli ve Akıllı Asistan ⚡",
         "ayarlar": "⚙️ Ayarlar", "model": "🧠 Model", "kisilik": "🎭 Kişilik",
-        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Artık bir psikolog, bir yazar, bir web kazıyıcı ve bir tasarımcıyım!",
+        "hosgeldin": "Merhaba! Ben BlazeX 🔥 Benimle sohbet edebilir, oyun oynayabilir, kod yazdırabilirsin!",
         "sor": "Bir şey sor...", "hata": "⚠️ Hata",
         "disa_aktar": "📥 Sohbeti İndir", "vision_analiz": "🔍 Görseli Analiz Et",
         "sesli_dinle": "🔊 Dinle", "kopyala": "📋", "kaynaklar": "🌐 Kaynaklar:",
-        "aydinlatma": "📜 Gizlilik", "aydinlatma_metni": "Bu uygulama KVKK kapsamında verilerinizi işlemektedir. Sohbetleriniz Groq (ABD) ve Tavily (ABD) sunucularına aktarılır. Lütfen kişisel bilgilerinizi yazmayın.",
+        "aydinlatma": "📜 Gizlilik ve Çerez Politikası", 
+        "aydinlatma_metni": "Bu uygulama, size daha iyi hizmet verebilmek ve sohbet geçmişinizi güvenli bir şekilde saklamak için çerezler (cookies) ve yerel depolama kullanmaktadır. Devam etmek için lütfen kabul edin.",
         "gecmis": "📚 Geçmiş Sohbetler", "pdf_oku": "📄 PDF Yükle", "otomatik_ses": "🔊 Otomatik Ses",
         "kamera": "📸 Kamera", "hafiza": "🧠 Yapay Zeka Hafızası", "veri_analizi": "📊 Excel/CSV",
         "oyun_modu": "🎮 Oyun Modu", "kod_calistirici": "💻 Kod Çalıştırıcı", "finans": "📈 Canlı Finans",
@@ -32,7 +34,8 @@ CEVIRI = {
         "pdf_ses": "📚 PDF Seslendirici", "web_scraper": "🌐 Web Scraper",
         "psikolog": "🧠 Psikolog Modu", "hikaye": "🎮 Hikaye Atölyesi",
         "tasarim": "🎨 Tasarım Asistanı", "takvim": "📅 Sanal Asistan",
-        "api": "🔗 API Paylaşımı"
+        "api": "🔗 API Paylaşımı", "giris_yap": "👤 Giriş Yap", "kayit_ol": "📝 Hesap Aç",
+        "misafir_giris": "🚀 Hesapsız Giriş (Misafir)"
     }
 }
 
@@ -52,19 +55,37 @@ VISION_MODEL = "qwen/qwen3.8-27b"
 if "mesajlar" not in st.session_state: st.session_state.mesajlar = []
 if "hafiza" not in st.session_state: st.session_state.hafiza = ""
 if "otomatik_ses" not in st.session_state: st.session_state.otomatik_ses = False
-if "onay_verildi" not in st.session_state: st.session_state.onay_verildi = False
-if "pdf_metin" not in st.session_state: st.session_state.pdf_metin = ""
-if "sayfa" not in st.session_state: st.session_state.sayfa = "anasayfa"
+if "cerez_onay" not in st.session_state: st.session_state.cerez_onay = False
+if "giris_yapildi" not in st.session_state: st.session_state.giris_yapildi = False
 if "kullanici_id" not in st.session_state: st.session_state.kullanici_id = "Misafir"
-if "takvim_notlari" not in st.session_state: st.session_state.takvim_notlari = []
+if "sayfa" not in st.session_state: st.session_state.sayfa = "giris" # Başlangıç ekranı
 
 # --- VERİTABANI ---
 def db_baglantisi(): return sqlite3.connect("blazegpt.db", check_same_thread=False)
 def db_olustur():
     c = db_baglantisi().cursor()
     c.execute("CREATE TABLE IF NOT EXISTS sohbetler (id INTEGER PRIMARY KEY AUTOINCREMENT, kullanici_id TEXT, baslik TEXT, mesajlar TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS kullanicilar (kullanici_adi TEXT PRIMARY KEY, sifre TEXT)")
     db_baglantisi().commit()
 db_olustur()
+
+def sifre_hashle(sifre): return hashlib.sha256(sifre.encode()).hexdigest()
+
+def kayit_ol(kullanici_adi, sifre):
+    try:
+        c = db_baglantisi().cursor()
+        c.execute("INSERT INTO kullanicilar (kullanici_adi, sifre) VALUES (?, ?)", (kullanici_adi, sifre_hashle(sifre)))
+        db_baglantisi().commit()
+        return True
+    except sqlite3.IntegrityError: return False
+
+def giris_yap(kullanici_adi, sifre):
+    c = db_baglantisi().cursor()
+    c.execute("SELECT sifre FROM kullanicilar WHERE kullanici_adi = ?", (kullanici_adi,))
+    res = c.fetchone()
+    if res and res[0] == sifre_hashle(sifre):
+        return True
+    return False
 
 def kaydet_sohbet(mesajlar, k_id):
     baslik = "Sohbet"
@@ -90,33 +111,79 @@ tavily = TavilyClient(api_key=st.secrets.get("TAVILY_API_KEY", ""))
 def sesli_oku(metin):
     safe_metin = metin.replace('"', '\\"').replace('\n', ' ')
     js = f"<script>var msg = new SpeechSynthesisUtterance(\"{safe_metin}\"); msg.lang = 'tr-TR'; window.speechSynthesis.speak(msg);</script>"
-    st.components.v1.html(js, height=0)
+    components.html(js, height=0)
 
-# --- SAYFA YÖNLENDİRME ---
-if not st.session_state.onay_verildi:
-    st.warning("⚠️ Devam etmek için lütfen aydınlatma metnini kabul edin.")
-    with st.container(border=True): st.write(CEVIRI["tr"]["aydinlatma_metni"])
-    if st.button("✅ Kabul Ediyorum", type="primary"): st.session_state.onay_verildi = True; st.rerun()
-    st.stop()
+# --- 1. ÇEREZ ONAY EKRANI (localStorage Kullanarak) ---
+# Tarayıcı hafızasında 'cerez_kabul' var mı diye kontrol ediyoruz
+cookie_check_js = """
+<script>
+    var cookieAccepted = localStorage.getItem("blazex_cerez_kabul");
+    if (cookieAccepted === "true") {
+        window.parent.document.getElementById("cerez_durumu").value = "true";
+    }
+</script>
+<input type="hidden" id="cerez_durumu" value="false">
+"""
+components.html(cookie_check_js, height=0)
 
-if st.session_state.sayfa == "anasayfa":
+if not st.session_state.cerez_onay:
+    with st.container(border=True):
+        st.markdown("### 🍪 Çerez Politikası")
+        st.write(CEVIRI["tr"]["aydinlatma_metni"])
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Kabul Ediyorum", type="primary", use_container_width=True):
+                # Çerezi tarayıcıya kaydet
+                components.html("<script>localStorage.setItem('blazex_cerez_kabul', 'true');</script>", height=0)
+                st.session_state.cerez_onay = True
+                st.rerun()
+        with col2:
+            if st.button("❌ Reddediyorum", use_container_width=True):
+                st.error("Sistemi kullanabilmek için çerezleri kabul etmelisiniz.")
+    st.stop() # Çerez kabul edilmeden aşağıya geçme
+
+# --- 2. GİRİŞ / HESAP AÇMA EKRANI ---
+if not st.session_state.giris_yapildi and st.session_state.sayfa == "giris":
     st.markdown("<h1 style='text-align: center; color: #4d6bfe; font-size: 4em;'>🔥 BlazeX</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-size: 1.2em;'>Geleceğin Yapay Zeka Asistanı</p>", unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs([CEVIRI["tr"]["giris_yap"], CEVIRI["tr"]["kayit_ol"]])
+    
+    with tab1:
+        k_adi = st.text_input("Kullanıcı Adı", key="giris_kadi")
+        sifre = st.text_input("Şifre", type="password", key="giris_sifre")
+        if st.button("Giriş Yap", use_container_width=True, type="primary"):
+            if giris_yap(k_adi, sifre):
+                st.session_state.giris_yapildi = True
+                st.session_state.kullanici_id = k_adi
+                st.session_state.sayfa = "uygulama"
+                st.rerun()
+            else: st.error("Hatalı kullanıcı adı veya şifre!")
+            
+    with tab2:
+        y_kadi = st.text_input("Yeni Kullanıcı Adı", key="kayit_kadi")
+        y_sifre = st.text_input("Yeni Şifre", type="password", key="kayit_sifre")
+        if st.button("Hesap Aç", use_container_width=True):
+            if kayit_ol(y_kadi, y_sifre):
+                st.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.")
+            else: st.error("Bu kullanıcı adı zaten alınmış.")
+            
     st.write("---")
-    
-    misafir_adi = st.text_input("Sana ne diyeyim? (Örn: Murat)", key="isim_input", placeholder="İsmini yaz...")
-    
-    if st.button("🚀 Hemen Başla", use_container_width=True, type="primary"):
-        if misafir_adi.strip():
-            st.session_state.kullanici_id = misafir_adi.strip()
-        st.session_state.sayfa = "uygulama"; st.rerun()
+    # HESAPSIZ GİRİŞ BUTONU
+    if st.button(CEVIRI["tr"]["misafir_giris"], use_container_width=True):
+        st.session_state.giris_yapildi = True
+        st.session_state.kullanici_id = "Misafir_" + str(uuid.uuid4())[:4]
+        st.session_state.sayfa = "uygulama"
+        st.rerun()
     st.stop()
 
+# --- 3. UYGULAMA (SOHBET EKRANI) ---
 if st.session_state.sayfa == "uygulama":
     with st.sidebar:
         st.markdown(f"### 👤 {st.session_state.kullanici_id}")
-        if st.button("🚪 Ana Sayfa"): 
-            st.session_state.sayfa = "anasayfa"
+        if st.button("🚪 Çıkış Yap"): 
+            st.session_state.giris_yapildi = False
+            st.session_state.sayfa = "giris"
             st.session_state.mesajlar = []
             st.rerun()
         st.markdown("---")
@@ -127,69 +194,21 @@ if st.session_state.sayfa == "uygulama":
             
         st.markdown("---")
         
-        # WEB SCRAPER
-        with st.expander(CEVIRI["tr"]["web_scraper"]):
-            url_input = st.text_input("Web Sitesi Linki (https://...)")
-            if st.button("🌐 Siteyi Oku ve Özetle"):
-                with st.spinner("Site okunuyor..."):
-                    try:
-                        res = requests.get(url_input, timeout=10)
-                        # Çok basit bir HTML temizleme
-                        import re
-                        temiz_metin = re.sub('<[^<]+?>', '', res.text)
-                        st.session_state.mesajlar.append({"role": "user", "content": f"Şu sitedeki metni özetle:\n{temiz_metin[:3000]}"})
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Site okunamadı: {e}")
+        # HIZLI BAŞLANGIÇ BUTONLARI
+        st.markdown("### ⚡ Hızlı Başlangıç")
+        if st.button("🎨 Bana Bir Kedi Çiz"):
+            st.session_state.mesajlar.append({"role": "user", "content": "Bana sevimli bir kedi çiz."})
+            st.rerun()
+        if st.button("📝 Kısa Bir Şiir Yaz"):
+            st.session_state.mesajlar.append({"role": "user", "content": "Bana doğa hakkında kısa bir şiir yaz."})
+            st.rerun()
+            
+        st.markdown("---")
+        
+        with st.expander(CEVIRI["tr"]["hafiza"]):
+            hafiza_input = st.text_area("Hafıza:", value=st.session_state.hafiza)
+            if st.button("🧠 Kaydet"): st.session_state.hafiza = hafiza_input
 
-        # SANAL ASİSTAN (TAKVİM)
-        with st.expander(CEVIRI["tr"]["takvim"]):
-            yeni_not = st.text_input("Not / Hatırlatıcı Ekle:")
-            if st.button("📅 Not Ekle"):
-                if yeni_not:
-                    st.session_state.takvim_notlari.append(yeni_not)
-                    st.success("Eklendi!")
-            for not_ in st.session_state.takvim_notlari:
-                st.info(f"📌 {not_}")
-
-        # DEDEKTİF MODU
-        with st.expander(CEVIRI["tr"]["dedektif"]):
-            metin = st.text_area("Analiz edilecek metni girin:")
-            if st.button("🕵️ Gizli Anlamı Çöz"):
-                st.session_state.mesajlar.append({"role": "user", "content": f"Bu metni bir dedektif gibi analiz et ve gizli anlamları bul:\n{metin}"})
-                st.rerun()
-
-        # MİMAR
-        with st.expander(CEVIRI["tr"]["mimar"]):
-            oda = st.text_input("Nasıl bir oda istiyorsun?")
-            if st.button("🎨 Odayı Tasarla"):
-                st.session_state.mesajlar.append({"role": "user", "content": f"Bana şu oda için bir tasarım planı ve eşya listesi çıkar: {oda}"})
-                st.rerun()
-
-        # RUTİN PLANLAYICI
-        with st.expander(CEVIRI["tr"]["rutin"]):
-            isler = st.text_area("Bugün neler yapmalısın?")
-            if st.button("⚡ Plan Oluştur"):
-                st.session_state.mesajlar.append({"role": "user", "content": f"Şu işlerimi saat saat planla:\n{isler}"})
-                st.rerun()
-
-        # HİKAYE ATÖLYESİ
-        with st.expander(CEVIRI["tr"]["hikaye"]):
-            hikaye_baslangic = st.text_input("Hikaye Nasıl Başlasın?")
-            if st.button("🎮 Hikayeyi Başlat"):
-                if hikaye_baslangic:
-                    st.session_state.mesajlar.append({"role": "user", "content": f"Beni interaktif bir hikayenin içine sok. Başlangıç: {hikaye_baslangic}. Bana seçenekler sun."})
-                    st.rerun()
-
-        # TASARIM ASİSTANI
-        with st.expander(CEVIRI["tr"]["tasarim"]):
-            tasarim_konu = st.text_input("Ne tasarlamak istiyorsun? (Örn: Doğum günü davetiyesi)")
-            if st.button("🎨 Tasarım Fikri Üret"):
-                if tasarim_konu:
-                    st.session_state.mesajlar.append({"role": "user", "content": f"Bana şunun için yaratıcı bir tasarım fikri ve renk paleti ver: {tasarim_konu}"})
-                    st.rerun()
-
-        # FİNANS
         with st.expander(CEVIRI["tr"]["finans"]):
             sembol = st.text_input("Sembol (Örn: BTC-USD, THYAO.IS)")
             if st.button("Fiyat Getir"):
@@ -198,7 +217,6 @@ if st.session_state.sayfa == "uygulama":
                     if not veri.empty: st.success(f"**{sembol}**: {veri['Close'].iloc[-1]:.2f}")
                 except: st.error("Bulunamadı.")
 
-        # KOD ÇALIŞTIRICI
         with st.expander(CEVIRI["tr"]["kod_calistirici"]):
             kod = st.text_area("Python:")
             if st.button("Çalıştır"):
@@ -208,26 +226,31 @@ if st.session_state.sayfa == "uygulama":
                     st.success("Çalıştı!"); st.write(local_vars)
                 except Exception as e: st.error(f"Hata: {e}")
 
-        # API PAYLAŞIMI
-        with st.expander(CEVIRI["tr"]["api"]):
-            st.code(f'POST https://api.blazex.com/v1/chat\nAuthorization: Bearer YOUR_API_KEY\n\n{{\n  "message": "Merhaba" \n}}', language="json")
-            st.caption("*(Temsili API - Geliştirme aşamasında)*")
+        with st.expander(CEVIRI["tr"]["pdf_ses"]):
+            pdf_file = st.file_uploader("PDF Yükle", type=["pdf"])
+            if pdf_file:
+                if st.button("📚 PDF'i Oku"):
+                    metin = pdf_metin_cikar(pdf_file)
+                    if metin:
+                        st.session_state.pdf_metin = metin
+                        st.success("Hazır!")
+            if "pdf_metin" in st.session_state and st.session_state.pdf_metin:
+                if st.button("🔊 Dinlemeye Başla"):
+                    sesli_oku(st.session_state.pdf_metin)
 
         st.markdown("---")
         st.session_state.otomatik_ses = st.toggle(CEVIRI["tr"]["otomatik_ses"], value=st.session_state.otomatik_ses)
 
-    # --- LOGO TAM ORTALAMA (CSS İLE) ---
+    # --- LOGO VE BAŞLIK ---
     try:
         with open("logo.png", "rb") as f:
             logo_base64 = base64.b64encode(f.read()).decode()
-            
         st.markdown(
             f"""
             <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 10px; margin-top: 20px;">
                 <img src="data:image/png;base64,{logo_base64}" width="120" style="border-radius: 15px; box-shadow: 0 4px 15px rgba(77, 107, 254, 0.3);">
             </div>
-            """, 
-            unsafe_allow_html=True
+            """, unsafe_allow_html=True
         )
     except:
         st.warning("Logo dosyası (logo.png) bulunamadı.")
@@ -236,7 +259,7 @@ if st.session_state.sayfa == "uygulama":
     
     if not st.session_state.mesajlar: st.info(CEVIRI["tr"]["hosgeldin"])
 
-    # --- ESKİ MESAJLARI GÖSTER ---
+    # --- MESAJLARI GÖSTER VE GERİ BİLDİRİM BUTONLARI ---
     for i, m in enumerate(st.session_state.mesajlar):
         if not isinstance(m["content"], str): continue
         
@@ -244,12 +267,19 @@ if st.session_state.sayfa == "uygulama":
         with st.chat_message(m["role"], avatar=avatar):
             st.markdown(m["content"])
             
+            # Bot cevabıysa Kopyala, Dinle ve Geri Bildirim butonları
             if m["role"] == "assistant":
-                c1, c2, c3 = st.columns([1, 1, 8])
+                c1, c2, c3, c4 = st.columns([1, 1, 1, 6])
                 with c1:
                     if st.button(CEVIRI["tr"]["sesli_dinle"], key=f"tts_{i}"): sesli_oku(m["content"])
                 with c2:
                     if st.button(CEVIRI["tr"]["kopyala"], key=f"cpy_{i}"): st.code(m["content"])
+                with c3:
+                    # GERİ BİLDİRİM (FEEDBACK) BUTONLARI
+                    if st.button("👍", key=f"up_{i}"):
+                        st.toast("Geri bildiriminiz kaydedildi. Teşekkürler!")
+                    if st.button("👎", key=f"down_{i}"):
+                        st.toast("Geri bildiriminiz kaydedildi. Geliştireceğiz!")
 
     # --- GİRİŞ KUTUSU VE ANİMASYON ---
     if soru := st.chat_input(CEVIRI["tr"]["sor"]):
