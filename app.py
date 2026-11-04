@@ -24,7 +24,8 @@ CEVIRI = {
         "aydinlatma_metni": "Size daha iyi hizmet verebilmek için çerezler kullanıyoruz. Devam etmek için lütfen kabul edin.",
         "giris_yap": "👤 Giriş Yap", "kayit_ol": "📝 Hesap Aç",
         "misafir_giris": "🚀 Hesapsız Giriş (Misafir)",
-        "galeri": "🎨 Sanat Galerisi", "qr_kod": "📱 QR Kod Üretici"
+        "galeri": "🎨 Sanat Galerisi", "qr_kod": "📱 QR Kod Üretici",
+        "model": "🧠 Model", "kisilik": "🎭 Kişilik", "ses_tonu": "🗣️ Ses Tonu" # Eksik olanlar geri eklendi
     }
 }
 
@@ -137,7 +138,6 @@ if st.session_state.sayfa == "uygulama":
 
         st.markdown("---")
         
-        # CANLI WEB TARAYICISI / SCRAPER
         with st.expander("🌐 Web Sitesi Okuyucu"):
             url_input = st.text_input("Link Yapıştır:")
             if st.button("Siteyi Oku"):
@@ -150,7 +150,6 @@ if st.session_state.sayfa == "uygulama":
                         st.rerun()
                     except Exception as e: st.error(f"Okunamadı: {e}")
 
-        # QR KOD ÜRETİCİ
         with st.expander("📱 QR Kod Üretici"):
             qr_link = st.text_input("Link veya Metin Girin:")
             if st.button("QR Kod Oluştur"):
@@ -163,7 +162,6 @@ if st.session_state.sayfa == "uygulama":
                     img.save(buf, format="PNG")
                     st.image(buf.getvalue(), caption="QR Kodunuz")
 
-        # SANAT GALERİSİ
         with st.expander("🎨 Sanat Galerisi"):
             if not st.session_state.galeri:
                 st.caption("Henüz görsel yok.")
